@@ -1,6 +1,6 @@
 # CLAUDE.md — Reglas del proyecto
 
-Plataforma de reservas de citas multi-tenant **Slotea** (la carpeta local sigue llamándose `turnio`). Es un proyecto de portfolio: el código, los tests y el README tienen que poder enseñarse en una entrevista.
+Plataforma de reservas de citas multi-tenant **Slotea**. Es un proyecto de portfolio: el código, los tests y el README tienen que poder enseñarse en una entrevista.
 El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-analisis.md). Consúltalo antes de cambiar el stack o la arquitectura.
 
 ## Forma de trabajar (obligatorio)
@@ -9,7 +9,7 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - **Opinión:** recomienda una opción en lugar de dar solo una lista.
 - **No inventes** datos personales ni de negocio (nombres, teléfonos, direcciones reales…). Si falta información, pregunta. Los datos de la demo son claramente ficticios.
 - **Pide permiso antes de:** instalar dependencias, borrar archivos importantes, hacer commit/push, publicar o desplegar, y crear cuentas o recursos en la nube.
-- **Alcance:** trabaja solo en `c:\dev\turnio`. No toques otros proyectos de `c:\dev`.
+- **Alcance:** trabaja solo en `c:\dev\slotea`. No toques otros proyectos de `c:\dev`.
 - **Secretos:** solo en archivos `.env*` ignorados por Git (y en los gestores de secretos de cada plataforma). Nunca en el código, en los commits ni en el chat. Mantén un `.env.example` sin valores reales.
 - **Tokens:** avisa cuando convenga hacer `/clear` y deja preparado el prompt para continuar.
 
