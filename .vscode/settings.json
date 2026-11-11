@@ -1,0 +1,8 @@
+{
+  // Terminales de este proyecto: Node 26 (instalado con fnm) y JDK 25, sin tocar el resto del equipo.
+  // Si actualizas Node con `fnm install 26`, cambia aquí la versión de la ruta.
+  "terminal.integrated.env.windows": {
+    "PATH": "${env:APPDATA}\\fnm\\node-versions\\v26.13.1\\installation;${env:JAVA_HOME}\\bin;${env:PATH}"
+  },
+  "python.terminal.useEnvFile": true
+}
