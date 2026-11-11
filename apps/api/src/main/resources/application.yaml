@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: slotea-api
+  # En local, las credenciales salen del .env de la raíz del repo (ignorado por Git).
+  # En producción se inyectan como variables de entorno (DB_URL, DB_USER, DB_PASSWORD).
+  config:
+    import:
+      - optional:file:../../.env[.properties]
+      - optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:slotea}}
+    username: ${DB_USER:${POSTGRES_USER:slotea}}
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:}}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate # el esquema lo gestiona solo Flyway
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  mvc:
+    problemdetails:
+      enabled: true
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
