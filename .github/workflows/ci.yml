@@ -47,6 +47,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # El contrato (openapi.json) lo vigila OpenApiContractTests en el job de la API; aquí se
+      # comprueba que los tipos de TS se generaron desde esa versión del contrato.
+      - name: API types match openapi.json
+        run: |
+          pnpm api:types
+          git diff --exit-code -- src/lib/api/schema.d.ts
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
