@@ -27,7 +27,7 @@ describe("PanelHome", () => {
     renderWithQuery(<PanelHome />);
 
     expect(await screen.findByText("Hola, Ana Demo")).toBeInTheDocument();
-    expect(screen.getByText("/barberia-demo")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /\/barberia-demo$/ })).toHaveAttribute("href", "/barberia-demo");
     expect(screen.getByText("Dueño")).toBeInTheDocument();
     const steps = await screen.findAllByRole("listitem");
     expect(steps.map((step) => step.textContent)).toEqual([

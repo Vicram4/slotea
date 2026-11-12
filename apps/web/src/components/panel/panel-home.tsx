@@ -1,8 +1,9 @@
 "use client";
 
-import { CheckCircle2, Circle } from "lucide-react";
+import { Check, CheckCircle2, Circle, Copy } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,9 @@ export function PanelHome() {
             <dt className="text-muted-foreground">Negocio</dt>
             <dd className="font-medium">{activeBusiness.name}</dd>
             <dt className="text-muted-foreground">Tu página</dt>
-            <dd className="font-medium">/{activeBusiness.slug}</dd>
+            <dd>
+              <BookingPageLink slug={activeBusiness.slug} />
+            </dd>
             <dt className="text-muted-foreground">Tu rol</dt>
             <dd className="font-medium">{roleLabels[activeBusiness.role]}</dd>
           </dl>
@@ -36,6 +39,32 @@ export function PanelHome() {
       </Card>
       <SetupChecklist userId={user.id} fullName={user.fullName} />
     </>
+  );
+}
+
+/** Enlace a la página pública de reservas y botón para copiarlo (para compartirlo con los clientes). */
+function BookingPageLink({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${globalThis.location?.origin ?? ""}/${slug}`;
+  const copy = async () => {
+    await navigator.clipboard?.writeText(url).catch(() => undefined);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <a href={`/${slug}`} target="_blank" rel="noreferrer" className="font-medium underline-offset-4 hover:underline">
+        {url.replace(/^https?:\/\//, "")}
+      </a>
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Copiar enlace" onClick={copy}>
+        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+      </Button>
+      {copied && (
+        <span role="status" className="text-muted-foreground text-xs">
+          Copiado
+        </span>
+      )}
+    </span>
   );
 }
 
