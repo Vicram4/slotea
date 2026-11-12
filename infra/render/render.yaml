@@ -19,3 +19,7 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
+      # Render genera un valor aleatorio de 256 bits en Base64. Que no coincida con el de Cloud Run
+      # solo obliga a volver a iniciar sesión al cambiar de plataforma.
+      - key: JWT_SECRET
+        generateValue: true

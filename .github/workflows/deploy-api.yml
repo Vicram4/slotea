@@ -76,6 +76,7 @@ jobs:
             DB_URL=db-url:latest
             DB_USER=db-user:latest
             DB_PASSWORD=db-password:latest
+            JWT_SECRET=jwt-secret:latest
           # Escala a cero; máximo 2 instancias para acotar coste y conexiones a Neon (2 × 5).
           flags: >-
             --service-account=${{ env.RUNTIME_SA }}
