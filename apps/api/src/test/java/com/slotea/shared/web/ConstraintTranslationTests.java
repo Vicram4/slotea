@@ -54,6 +54,6 @@ class ConstraintTranslationTests {
                         new WorkingHours(staff, 1, LocalTime.of(13, 0), LocalTime.of(18, 0)))))));
 
         assertThat(thrown).isInstanceOf(DataAccessException.class);
-        assertThat(ApiExceptionHandler.violatedConstraint(thrown)).isEqualTo("working_hours_no_overlap");
+        assertThat(DatabaseErrors.violatedConstraint(thrown)).isEqualTo("working_hours_no_overlap");
     }
 }

@@ -75,6 +75,19 @@ public class StaffService {
         return response(member);
     }
 
+    /** Un profesional activo y los servicios que hace (activos o no: eso lo decide quien llama). */
+    public record ActiveStaff(StaffMember member, List<UUID> serviceIds) {
+    }
+
+    /** Para la página pública y el cálculo de huecos: profesionales activos, por nombre. */
+    public List<ActiveStaff> activeWithServices() {
+        Map<UUID, List<UUID>> services = links.serviceIdsByStaff();
+        return staff.findAllOrdered().stream()
+                .filter(StaffMember::isActive)
+                .map(s -> new ActiveStaff(s, services.getOrDefault(s.getId(), List.of())))
+                .toList();
+    }
+
     /** Para otros módulos (horarios, cierres): el profesional del negocio actual, o 404. */
     public StaffMember require(UUID id) {
         return staff.findById(id).orElseThrow(() -> ApiException.notFound("No existe ese profesional."));

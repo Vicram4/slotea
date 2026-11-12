@@ -209,6 +209,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/businesses/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Datos públicos del negocio: servicios y profesionales que se pueden reservar */
+        get: operations["business"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/businesses/{slug}/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reservar como invitado. Sin staffId, la API asigna un profesional libre. 409 si el hueco ya no está libre */
+        post: operations["book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/businesses/{slug}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Huecos libres de un servicio por día, en la zona horaria del negocio (máx. 14 días) */
+        get: operations["availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/services": {
         parameters: {
             query?: never;
@@ -320,6 +371,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AvailabilityResponse: {
+            days: components["schemas"]["DayAvailability"][];
+            timezone: string;
+        };
+        BookingRequest: {
+            customer: components["schemas"]["CustomerInput"];
+            notes?: string | null;
+            /** Format: uuid */
+            serviceId: string;
+            /** Format: uuid */
+            staffId?: string | null;
+            /** Format: date-time */
+            startsAt: string;
+        };
+        BookingResponse: {
+            customerEmail: string;
+            /** Format: date */
+            date: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: uuid */
+            id: string;
+            serviceName: string;
+            staffName: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** @example 10:15 */
+            time: string;
+            timezone: string;
+        };
         BusinessResponse: {
             contactEmail: string;
             /** Format: date-time */
@@ -352,6 +433,17 @@ export interface components {
             staffId?: string | null;
             /** Format: date */
             startDate: string;
+        };
+        CustomerInput: {
+            /** Format: email */
+            email: string;
+            fullName: string;
+            phone?: string | null;
+        };
+        DayAvailability: {
+            /** Format: date */
+            date: string;
+            slots: components["schemas"]["SlotResponse"][];
         };
         LoginRequest: {
             /** Format: email */
@@ -387,6 +479,30 @@ export interface components {
             /** Format: date-time */
             time: string;
         };
+        PublicBusinessResponse: {
+            name: string;
+            services: components["schemas"]["PublicService"][];
+            slug: string;
+            staff: components["schemas"]["PublicStaff"][];
+            /** @example Europe/Madrid */
+            timezone: string;
+        };
+        PublicService: {
+            description?: string | null;
+            /** Format: int32 */
+            durationMin: number;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int32 */
+            priceCents?: number | null;
+        };
+        PublicStaff: {
+            displayName: string;
+            /** Format: uuid */
+            id: string;
+            serviceIds: string[];
+        };
         ServiceRequest: {
             active?: boolean | null;
             /** Format: int32 */
@@ -421,6 +537,12 @@ export interface components {
             password: string;
             slug: string;
             timezone?: string | null;
+        };
+        SlotResponse: {
+            /** Format: date-time */
+            startsAt: string;
+            /** @example 10:15 */
+            time: string;
         };
         StaffRequest: {
             active?: boolean | null;
@@ -771,6 +893,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PingResponse"];
+                };
+            };
+        };
+    };
+    business: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBusinessResponse"];
+                };
+            };
+        };
+    };
+    book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingResponse"];
+                };
+            };
+        };
+    };
+    availability: {
+        parameters: {
+            query: {
+                serviceId: string;
+                staffId?: string | null;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponse"];
                 };
             };
         };

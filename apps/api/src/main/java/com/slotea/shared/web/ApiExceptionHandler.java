@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.jspecify.annotations.Nullable;
-import org.postgresql.util.PSQLException;
-import org.postgresql.util.ServerErrorMessage;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,7 +30,9 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             "business_slug_key", "Esa dirección ya está en uso. Prueba con otra.",
             "service_business_name_key", "Ya tienes un servicio con ese nombre.",
             "staff_member_business_user_key", "Ese usuario ya tiene ficha de profesional.",
-            "working_hours_no_overlap", "Los tramos del horario se solapan.");
+            "working_hours_no_overlap", "Los tramos del horario se solapan.",
+            // Normalmente lo captura BookingService (para probar con otro profesional); esto es la red de seguridad.
+            "appointment_no_overlap", "Ese hueco acaba de ocuparse. Elige otra hora.");
 
     @Override
     protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
@@ -48,25 +48,15 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /**
      * Hibernate no traduce todas las violaciones a {@code ConstraintViolationException} (las de
-     * {@code EXCLUDE}, SQLState 23P01, no): leemos el nombre de la restricción del propio driver.
+     * {@code EXCLUDE}, SQLState 23P01, no): ver {@link DatabaseErrors}.
      */
     @ExceptionHandler
     ProblemDetail handleDataAccess(DataAccessException ex) throws DataAccessException {
-        String message = CONFLICTS.get(violatedConstraint(ex));
+        String message = CONFLICTS.get(DatabaseErrors.violatedConstraint(ex));
         if (message == null) {
             throw ex;
         }
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message);
-    }
-
-    static @Nullable String violatedConstraint(Throwable ex) {
-        for (Throwable t = ex; t != null; t = t.getCause()) {
-            if (t instanceof PSQLException psql) {
-                ServerErrorMessage server = psql.getServerErrorMessage();
-                return server == null ? null : server.getConstraint();
-            }
-        }
-        return null;
     }
 
     record FieldError(String field, @Nullable String message) {

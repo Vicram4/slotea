@@ -334,6 +334,129 @@
         "tags" : [ "ping-controller" ]
       }
     },
+    "/api/v1/public/businesses/{slug}" : {
+      "get" : {
+        "operationId" : "business",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicBusinessResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Datos públicos del negocio: servicios y profesionales que se pueden reservar",
+        "tags" : [ "public" ]
+      }
+    },
+    "/api/v1/public/businesses/{slug}/appointments" : {
+      "post" : {
+        "operationId" : "book",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BookingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "summary" : "Reservar como invitado. Sin staffId, la API asigna un profesional libre. 409 si el hueco ya no está libre",
+        "tags" : [ "public" ]
+      }
+    },
+    "/api/v1/public/businesses/{slug}/availability" : {
+      "get" : {
+        "operationId" : "availability",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "serviceId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "staffId",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Huecos libres de un servicio por día, en la zona horaria del negocio (máx. 14 días)",
+        "tags" : [ "public" ]
+      }
+    },
     "/api/v1/services" : {
       "get" : {
         "operationId" : "list_1",
@@ -665,6 +788,86 @@
   },
   "components" : {
     "schemas" : {
+      "AvailabilityResponse" : {
+        "type" : "object",
+        "properties" : {
+          "days" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DayAvailability"
+            }
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "days", "timezone" ]
+      },
+      "BookingRequest" : {
+        "type" : "object",
+        "properties" : {
+          "customer" : {
+            "$ref" : "#/components/schemas/CustomerInput"
+          },
+          "notes" : {
+            "type" : [ "string", "null" ],
+            "maxLength" : 500,
+            "minLength" : 0
+          },
+          "serviceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "staffId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "customer", "serviceId", "startsAt" ]
+      },
+      "BookingResponse" : {
+        "type" : "object",
+        "properties" : {
+          "customerEmail" : {
+            "type" : "string"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "endsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "serviceName" : {
+            "type" : "string"
+          },
+          "staffName" : {
+            "type" : "string"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "time" : {
+            "type" : "string",
+            "example" : "10:15",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "customerEmail", "date", "endsAt", "id", "serviceName", "staffName", "startsAt", "time", "timezone" ]
+      },
       "BusinessResponse" : {
         "type" : "object",
         "properties" : {
@@ -745,6 +948,43 @@
           }
         },
         "required" : [ "createdAt", "endDate", "id", "startDate" ]
+      },
+      "CustomerInput" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "fullName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "phone" : {
+            "type" : [ "string", "null" ],
+            "pattern" : "^\\+?[0-9][0-9 ]{5,18}$"
+          }
+        },
+        "required" : [ "email", "fullName" ]
+      },
+      "DayAvailability" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "slots" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SlotResponse"
+            }
+          }
+        },
+        "required" : [ "date", "slots" ]
       },
       "LoginRequest" : {
         "type" : "object",
@@ -844,6 +1084,78 @@
           }
         },
         "required" : [ "service", "status", "time" ]
+      },
+      "PublicBusinessResponse" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "services" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PublicService"
+            }
+          },
+          "slug" : {
+            "type" : "string"
+          },
+          "staff" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PublicStaff"
+            }
+          },
+          "timezone" : {
+            "type" : "string",
+            "example" : "Europe/Madrid"
+          }
+        },
+        "required" : [ "name", "services", "slug", "staff", "timezone" ]
+      },
+      "PublicService" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : [ "string", "null" ]
+          },
+          "durationMin" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "priceCents" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        },
+        "required" : [ "durationMin", "id", "name" ]
+      },
+      "PublicStaff" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "serviceIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          }
+        },
+        "required" : [ "displayName", "id", "serviceIds" ]
       },
       "ServiceRequest" : {
         "type" : "object",
@@ -953,6 +1265,21 @@
           }
         },
         "required" : [ "businessName", "email", "fullName", "password", "slug" ]
+      },
+      "SlotResponse" : {
+        "type" : "object",
+        "properties" : {
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "time" : {
+            "type" : "string",
+            "example" : "10:15",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          }
+        },
+        "required" : [ "startsAt", "time" ]
       },
       "StaffRequest" : {
         "type" : "object",

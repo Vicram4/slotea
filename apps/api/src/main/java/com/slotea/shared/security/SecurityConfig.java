@@ -32,6 +32,7 @@ class SecurityConfig {
     static final RequestMatcher PUBLIC_PATHS = new OrRequestMatcher(
             pathPattern("/api/v1/auth/**"),
             pathPattern("/api/v1/ping"),
+            pathPattern("/api/v1/public/**"),
             pathPattern("/actuator/health/**"),
             pathPattern("/v3/api-docs/**"),
             pathPattern("/swagger-ui/**"),
