@@ -37,6 +37,9 @@ app:
     refresh-token-ttl: 30d
 
 springdoc:
+  # Orden estable: el OpenAPI se guarda como contrato (apps/web/openapi.json) y se compara en CI.
+  writer-with-order-by-keys: true
+  default-produces-media-type: application/json
   swagger-ui:
     # Swagger UI lee la cookie XSRF-TOKEN y envía la cabecera: se puede probar el login desde ahí.
     csrf:

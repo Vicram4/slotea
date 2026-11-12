@@ -1,0 +1,447 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/api/v1/auth/csrf" : {
+      "get" : {
+        "operationId" : "csrf",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "summary" : "Obtener la cookie CSRF",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Iniciar sesión",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "operationId" : "logout",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "summary" : "Cerrar sesión (revoca el refresh token)",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Renovar la sesión (rota el refresh token)",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/auth/signup" : {
+      "post" : {
+        "operationId" : "signup",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "summary" : "Registrar un negocio y su dueño (inicia sesión)",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/business" : {
+      "get" : {
+        "operationId" : "get",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BusinessResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Datos del negocio activo",
+        "tags" : [ "business" ]
+      },
+      "patch" : {
+        "operationId" : "update",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateBusinessRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BusinessResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cambiar los datos del negocio (solo el dueño)",
+        "tags" : [ "business" ]
+      }
+    },
+    "/api/v1/business/members" : {
+      "get" : {
+        "operationId" : "members",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MemberResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Miembros del negocio (solo el dueño)",
+        "tags" : [ "business" ]
+      }
+    },
+    "/api/v1/business/members/{userId}" : {
+      "get" : {
+        "operationId" : "member",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Un miembro del negocio (solo el dueño)",
+        "tags" : [ "business" ]
+      }
+    },
+    "/api/v1/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Quién soy: usuario, negocio activo y roles",
+        "tags" : [ "auth" ]
+      }
+    },
+    "/api/v1/ping" : {
+      "get" : {
+        "operationId" : "ping",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ping-controller" ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "BusinessResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contactEmail" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "demo" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "slug" : {
+            "type" : "string"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "contactEmail", "createdAt", "demo", "id", "name", "slug", "timezone" ]
+      },
+      "LoginRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "password" : {
+            "type" : "string",
+            "maxLength" : 72,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "email", "password" ]
+      },
+      "MeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "activeBusiness" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/MembershipSummary"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "memberships" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MembershipSummary"
+            }
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/UserView"
+          }
+        },
+        "required" : [ "memberships", "user" ]
+      },
+      "MemberResponse" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "joinedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "OWNER", "STAFF" ]
+          },
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "email", "fullName", "joinedAt", "role", "userId" ]
+      },
+      "MembershipSummary" : {
+        "type" : "object",
+        "properties" : {
+          "businessId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "OWNER", "STAFF" ]
+          },
+          "slug" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "businessId", "name", "role", "slug" ]
+      },
+      "PingResponse" : {
+        "type" : "object",
+        "properties" : {
+          "service" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "time" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "service", "status", "time" ]
+      },
+      "SignupRequest" : {
+        "type" : "object",
+        "properties" : {
+          "businessName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "fullName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "password" : {
+            "type" : "string",
+            "maxLength" : 72,
+            "minLength" : 10
+          },
+          "slug" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 3,
+            "pattern" : "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "timezone" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "businessName", "email", "fullName", "password", "slug" ]
+      },
+      "UpdateBusinessRequest" : {
+        "type" : "object",
+        "properties" : {
+          "contactEmail" : {
+            "type" : [ "string", "null" ],
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "name" : {
+            "type" : [ "string", "null" ],
+            "maxLength" : 100,
+            "minLength" : 1,
+            "pattern" : ".*\\S.*"
+          },
+          "timezone" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "UserView" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "email", "fullName", "id" ]
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@ import com.slotea.auth.AuthDtos.SignupRequest;
 import com.slotea.shared.security.AuthClaims;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -42,7 +43,7 @@ class AuthController {
     @Operation(summary = "Obtener la cookie CSRF")
     @GetMapping("/csrf")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void csrf(CsrfToken token) {
+    void csrf(@Parameter(hidden = true) CsrfToken token) {
         token.getToken(); // cargar el token diferido obliga a escribir la cookie
     }
 
@@ -61,7 +62,8 @@ class AuthController {
 
     @Operation(summary = "Renovar la sesión (rota el refresh token)")
     @PostMapping("/refresh")
-    MeResponse refresh(@CookieValue(name = AuthClaims.REFRESH_COOKIE, required = false) @Nullable String refreshToken,
+    MeResponse refresh(@Parameter(hidden = true) @CookieValue(name = AuthClaims.REFRESH_COOKIE, required = false)
+            @Nullable String refreshToken,
             HttpServletResponse response) {
         try {
             return open(auth.refresh(refreshToken), response);
@@ -74,7 +76,8 @@ class AuthController {
     @Operation(summary = "Cerrar sesión (revoca el refresh token)")
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void logout(@CookieValue(name = AuthClaims.REFRESH_COOKIE, required = false) @Nullable String refreshToken,
+    void logout(@Parameter(hidden = true) @CookieValue(name = AuthClaims.REFRESH_COOKIE, required = false)
+            @Nullable String refreshToken,
             HttpServletResponse response) {
         auth.logout(refreshToken);
         cookies.clear(response);
