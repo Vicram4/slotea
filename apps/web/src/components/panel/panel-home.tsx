@@ -1,49 +1,29 @@
 "use client";
 
+import { CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { roleLabels, useLogout, useMe } from "@/lib/session";
+import { useCanEdit, useSaveStaff, useServices, useStaff } from "@/lib/catalog";
+import { roleLabels, useMe } from "@/lib/session";
 
-/** «Quién soy»: usuario, negocio activo y rol. Sin sesión, manda al login. */
+/** Inicio del panel: quién soy y qué falta para que el negocio pueda recibir reservas. */
 export function PanelHome() {
-  const router = useRouter();
-  const me = useMe();
-  const logout = useLogout();
-
-  useEffect(() => {
-    if (me.data === null) router.replace("/login");
-  }, [me.data, router]);
-
-  if (me.isPending || me.data === null) {
-    return <p role="status">Cargando tu panel…</p>;
-  }
-  if (me.isError) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>No se pudo cargar tu cuenta. Recarga la página.</AlertDescription>
-      </Alert>
-    );
-  }
-
-  const { user, activeBusiness } = me.data;
-
-  const onLogout = async () => {
-    await logout.mutateAsync().catch(() => undefined);
-    router.replace("/login");
-  };
+  const me = useMe().data;
+  if (!me?.activeBusiness) return null;
+  const { user, activeBusiness } = me;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">Hola, {user.fullName}</CardTitle>
-        <CardDescription>{user.email}</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-6">
-        {activeBusiness ? (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Hola, {user.fullName}</CardTitle>
+          <CardDescription>{user.email}</CardDescription>
+        </CardHeader>
+        <CardContent>
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             <dt className="text-muted-foreground">Negocio</dt>
             <dd className="font-medium">{activeBusiness.name}</dd>
@@ -52,12 +32,81 @@ export function PanelHome() {
             <dt className="text-muted-foreground">Tu rol</dt>
             <dd className="font-medium">{roleLabels[activeBusiness.role]}</dd>
           </dl>
-        ) : (
-          <p className="text-sm">Tu cuenta todavía no pertenece a ningún negocio.</p>
+        </CardContent>
+      </Card>
+      <SetupChecklist userId={user.id} fullName={user.fullName} />
+    </>
+  );
+}
+
+function SetupChecklist({ userId, fullName }: { userId: string; fullName: string }) {
+  const router = useRouter();
+  const canEdit = useCanEdit();
+  const services = useServices();
+  const staff = useStaff();
+  const addMe = useSaveStaff();
+
+  if (services.isPending || staff.isPending) return <p role="status">Cargando…</p>;
+  if (services.isError || staff.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>No se pudo cargar el catálogo. Recarga la página.</AlertDescription>
+      </Alert>
+    );
+  }
+
+  const activeStaff = staff.data.filter((s) => s.active);
+  const steps = [
+    {
+      done: services.data.some((s) => s.active),
+      label: "Crea los servicios que ofreces",
+      href: "/panel/servicios",
+    },
+    { done: activeStaff.length > 0, label: "Añade a tu equipo", href: "/panel/profesionales" },
+    {
+      done: activeStaff.length > 0 && activeStaff.every((s) => s.serviceIds.length > 0),
+      label: "Indica qué servicios hace cada profesional y su horario",
+      href: "/panel/profesionales",
+    },
+  ];
+  const amStaff = staff.data.some((s) => s.userId === userId);
+
+  const onAddMe = async () => {
+    const created = await addMe.mutateAsync({ body: { displayName: fullName, userId } }).catch(() => null);
+    if (created) router.push(`/panel/profesionales/${created.id}`);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configura tu negocio</CardTitle>
+        <CardDescription>Cuando esté todo listo, tus clientes podrán reservar en tu página.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <ol className="grid gap-3">
+          {steps.map((step) => (
+            <li key={step.label} className="flex items-center gap-3">
+              {step.done ? (
+                <CheckCircle2 className="size-5 text-green-600" aria-hidden />
+              ) : (
+                <Circle className="text-muted-foreground size-5" aria-hidden />
+              )}
+              <Link href={step.href} className="underline-offset-4 hover:underline">
+                {step.label}
+              </Link>
+              <span className="sr-only">{step.done ? "(hecho)" : "(pendiente)"}</span>
+            </li>
+          ))}
+        </ol>
+        {canEdit && !amStaff && (
+          <div className="flex flex-wrap items-center gap-3 border-t pt-4 text-sm">
+            <span>¿También atiendes tú a los clientes?</span>
+            <Button size="sm" onClick={onAddMe} disabled={addMe.isPending}>
+              {addMe.isPending ? "Añadiendo…" : "Añádete como profesional"}
+            </Button>
+            {addMe.isError && <span className="text-destructive">No se pudo añadir. Inténtalo de nuevo.</span>}
+          </div>
         )}
-        <Button variant="outline" className="justify-self-start" onClick={onLogout} disabled={logout.isPending}>
-          {logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}
-        </Button>
       </CardContent>
     </Card>
   );
