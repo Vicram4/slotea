@@ -31,6 +31,9 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Tests: no uses `SecurityMockMvcRequestPostProcessors.csrf()` (cambia el repositorio CSRF del contexto compartido); usa `SpaCsrf.spaCsrf()`. Tests web con `@WebMvcTest` → `@Import(WebSliceSecurity.class)`.
 - Tenancy: el tenant se fija al **abrir la sesión** de Hibernate; para cruzar negocios, `SystemTransactions` (nunca dentro de otra transacción).
 - Hibernate 7 **no** da nombre a las violaciones de `EXCLUDE` (23P01): `ApiExceptionHandler` lo lee de la `PSQLException`. Para un 409 nuevo, añade la restricción a su mapa `CONFLICTS`.
+- `EXCLUDE` + inserciones simultáneas = **deadlocks** (40P01, detectados tras 1 s y de uno en uno). `BookingService` encola por profesional (`FOR NO KEY UPDATE`) y hace una transacción por intento. No lo quites.
+- Rutas públicas: el tenant lo fija `PublicTenantFilter` a partir del slug (`/api/v1/public/businesses/{slug}/**`). No recibas un `businessId` del cliente.
+- Next 16 + `cacheComponents`: en rutas con parámetros sin `generateStaticParams`, `await params` va dentro de un `Suspense` (ver `app/[slug]/page.tsx`).
 - Next 16 + `cacheComponents`: `usePathname()` en un componente cliente bloquea el prerender de rutas con parámetros → envuélvelo en `Suspense` (ver `PanelShell`).
 - Vitest/jsdom: Radix necesita `ResizeObserver` (stub en `vitest.setup.ts`). Para nombres accesibles de botones con icono, usa `aria-label`, no `<span class="sr-only">`.
 - MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
