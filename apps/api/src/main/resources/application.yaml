@@ -29,6 +29,19 @@ spring:
 server:
   port: ${PORT:8080}
 
+app:
+  auth:
+    # Clave HS256 en Base64 (≥ 32 bytes). Sin ella la API no arranca. Ver .env.example.
+    jwt-secret: ${JWT_SECRET:}
+    access-token-ttl: 15m
+    refresh-token-ttl: 30d
+
+springdoc:
+  swagger-ui:
+    # Swagger UI lee la cookie XSRF-TOKEN y envía la cabecera: se puede probar el login desde ahí.
+    csrf:
+      enabled: true
+
 management:
   endpoints:
     web:

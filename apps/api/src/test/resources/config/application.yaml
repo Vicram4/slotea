@@ -1,0 +1,5 @@
+# Se suma a src/main/resources/application.yaml en todos los tests (classpath:/config/ tiene prioridad).
+app:
+  auth:
+    # Clave SOLO para tests (no es un secreto: nunca se usa fuera de ellos).
+    jwt-secret: dGVzdC1vbmx5LWp3dC1zZWNyZXQtbm90LXVzZWQtaW4tcHJvZHVjdGlvbiE=
