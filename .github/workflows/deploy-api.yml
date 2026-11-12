@@ -1,0 +1,98 @@
+name: Deploy API
+
+# Despliega la API en Cloud Run solo cuando la CI de main termina en verde.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Nunca dos despliegues a la vez; si llega uno nuevo, el anterior termina primero.
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # token OIDC para Workload Identity Federation (sin claves JSON)
+
+env:
+  # Nada de esto es secreto: identifica recursos, no da acceso por sí solo.
+  PROJECT_ID: slotea-514518
+  REGION: europe-west1
+  SERVICE: slotea-api
+  IMAGE: europe-west1-docker.pkg.dev/slotea-514518/slotea/api
+  WIF_PROVIDER: projects/908024172167/locations/global/workloadIdentityPools/github/providers/slotea-repo
+  DEPLOYER_SA: github-deployer@slotea-514518.iam.gserviceaccount.com
+  RUNTIME_SA: slotea-api@slotea-514518.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    name: Build and deploy to Cloud Run
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # En workflow_run hay que desplegar exactamente el commit que pasó la CI.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Authenticate to Google Cloud (keyless)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+          token_format: access_token
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/api
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha || github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          region: ${{ env.REGION }}
+          service: ${{ env.SERVICE }}
+          image: ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha || github.sha }}
+          secrets: |-
+            DB_URL=db-url:latest
+            DB_USER=db-user:latest
+            DB_PASSWORD=db-password:latest
+          # Escala a cero; máximo 2 instancias para acotar coste y conexiones a Neon (2 × 5).
+          flags: >-
+            --service-account=${{ env.RUNTIME_SA }}
+            --min-instances=0
+            --max-instances=2
+            --memory=512Mi
+            --cpu=1
+            --cpu-boost
+            --concurrency=80
+            --timeout=60
+            --port=8080
+
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "${{ steps.deploy.outputs.url }}/actuator/health"; then exit 0; fi
+            sleep 5
+          done
+          echo "::error::La API no responde tras el despliegue"
+          exit 1
