@@ -10,10 +10,12 @@ Plataforma de reservas de citas para pequeños negocios (peluquerías, barbería
 
 | Parte | Tecnología |
 |---|---|
-| API | Java 25 · Spring Boot 4.1 · Spring Data JPA · Flyway · springdoc-openapi |
-| Base de datos | PostgreSQL 17 |
-| Web | Next.js 16 (App Router) · TypeScript · Tailwind 4 |
-| Tests | JUnit 5 + Testcontainers · Vitest + Testing Library |
+| API | Java 25 · Spring Boot 4.1 · Spring Security 7 (JWT en cookie) · Spring Data JPA · Flyway · springdoc-openapi |
+| Base de datos | PostgreSQL 17 (multi-tenant con `@TenantId` de Hibernate) |
+| Web | Next.js 16 (App Router) · TypeScript · Tailwind 4 + shadcn/ui · TanStack Query · cliente tipado desde OpenAPI |
+| Tests | JUnit 5 + Testcontainers · Vitest + Testing Library + MSW |
+
+Cómo funcionan la sesión y el aislamiento entre negocios: [docs/fase-4-identidad.md](docs/fase-4-identidad.md).
 | CI | GitHub Actions |
 
 ## Estructura
@@ -31,7 +33,7 @@ compose.yaml PostgreSQL + Mailpit para desarrollo local
 Requisitos: JDK 25, Node 26, pnpm y Docker.
 
 ```bash
-cp .env.example .env                          # pon una contraseña en POSTGRES_PASSWORD
+cp .env.example .env                          # pon POSTGRES_PASSWORD y JWT_SECRET (openssl rand -base64 48)
 cp apps/web/.env.example apps/web/.env.local
 docker compose up -d                          # PostgreSQL + Mailpit
 
@@ -44,4 +46,11 @@ cd apps/web && pnpm install && pnpm dev       # Web en http://localhost:3000
 ```bash
 cd apps/api && ./mvnw verify                  # incluye tests contra PostgreSQL real (Testcontainers)
 cd apps/web && pnpm lint && pnpm typecheck && pnpm test
+```
+
+Si cambias la API, actualiza el contrato y los tipos de la web:
+
+```bash
+cd apps/api && ./mvnw test -Dtest=OpenApiContractTests -Dopenapi.update=true   # → apps/web/openapi.json
+cd apps/web && pnpm api:types                                                  # → src/lib/api/schema.d.ts
 ```

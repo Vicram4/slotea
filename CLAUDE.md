@@ -27,6 +27,10 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Spring Security 7: solo DSL con lambdas.
 - Testcontainers 2: `testcontainers-postgresql`, paquete `org.testcontainers.postgresql`.
 - Next 16: `params`, `searchParams`, `cookies()` y `headers()` son **async**. `next lint` ya no existe (se usa `eslint`).
+- Security: el resource server **excluye del CSRF las peticiones con bearer token**; como nuestro JWT va en cookie, `SecurityConfig` lo vuelve a exigir. No lo quites.
+- Tests: no uses `SecurityMockMvcRequestPostProcessors.csrf()` (cambia el repositorio CSRF del contexto compartido); usa `SpaCsrf.spaCsrf()`. Tests web con `@WebMvcTest` → `@Import(WebSliceSecurity.class)`.
+- Tenancy: el tenant se fija al **abrir la sesión** de Hibernate; para cruzar negocios, `SystemTransactions` (nunca dentro de otra transacción).
+- MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
 - Ante la duda, **lee la documentación de la versión instalada** antes de escribir código.
 
 ## Arquitectura
@@ -56,6 +60,7 @@ Requisitos: JDK 25, Node 26 (`.node-version`, con fnm), pnpm, Docker. Primera ve
 - Servicios locales (PostgreSQL + Mailpit): `docker compose up -d` (raíz). Mailpit: http://localhost:8025
 - API: `cd apps/api` → `./mvnw spring-boot:run` (arranca) · `./mvnw verify` (tests, necesita Docker)
 - Web: `cd apps/web` → `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build`
+- Contrato tras cambiar la API: `./mvnw test -Dtest=OpenApiContractTests -Dopenapi.update=true` (en `apps/api`) y luego `pnpm api:types` (en `apps/web`).
 - Swagger UI (local): `http://localhost:<PORT>/swagger-ui.html` · OpenAPI: `/v3/api-docs`
 - En este equipo los puertos son 5433 (BD) y 8081 (API) porque 5432/8080 los usa otro proyecto; se cambian en `.env`.
 - Herramienta Bash de Claude: el `.bashrc` redefine `cd` (fnm); usar `builtin cd`. Para Node, mejor PowerShell con `$env:APPDATA\fnm\node-versions\v26.13.1\installation` en el `PATH`.
