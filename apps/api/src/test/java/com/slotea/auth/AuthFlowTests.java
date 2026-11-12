@@ -155,6 +155,23 @@ class AuthFlowTests {
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
     }
 
+    /**
+     * Regresión: el resource server excluye del CSRF las peticiones con bearer token. El nuestro
+     * viaja en una cookie (el navegador la envía solo), así que con sesión también hay que exigirlo.
+     */
+    @Test
+    void authenticatedRequestsStillRequireCsrf() {
+        var tenant = api.signup("csrf-auth");
+        assertThat(mvc.patch().uri("/api/v1/business").cookie(tenant.owner().access())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"Ataque CSRF\"}"))
+                .hasStatus(HttpStatus.FORBIDDEN)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(mvc.post().uri("/api/v1/auth/logout").cookie(tenant.owner().refresh()))
+                .hasStatus(HttpStatus.FORBIDDEN);
+        assertThat(mvc.get().uri("/api/v1/business").cookie(tenant.owner().access()))
+                .bodyJson().extractingPath("$.name").isEqualTo("Negocio csrf-auth");
+    }
+
     /** El flujo real de la SPA: pedir la cookie XSRF-TOKEN y devolverla en la cabecera. */
     @Test
     void csrfCookieAndHeaderAllowPosting() {

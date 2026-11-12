@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,6 +16,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -39,7 +41,19 @@ class SecurityConfig {
     @Bean
     SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailSecurityHandler problems) {
         http
-                .csrf(csrf -> csrf.spa())
+                .csrf(csrf -> csrf.spa().withObjectPostProcessor(new ObjectPostProcessor<CsrfFilter>() {
+                    /*
+                     * El resource server excluye del CSRF las peticiones que traen un bearer token,
+                     * porque normalmente viaja en la cabecera Authorization. El nuestro viaja en una
+                     * cookie que el navegador envía solo: sin esto, el panel quedaría expuesto a CSRF.
+                     * Se aplica después de esa exclusión, así que la regla estándar es la que vale.
+                     */
+                    @Override
+                    public <O extends CsrfFilter> O postProcess(O filter) {
+                        filter.setRequireCsrfProtectionMatcher(CsrfFilter.DEFAULT_CSRF_MATCHER);
+                        return filter;
+                    }
+                }))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(cache -> cache.disable())
                 .logout(logout -> logout.disable())
