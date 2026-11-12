@@ -30,6 +30,9 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Security: el resource server **excluye del CSRF las peticiones con bearer token**; como nuestro JWT va en cookie, `SecurityConfig` lo vuelve a exigir. No lo quites.
 - Tests: no uses `SecurityMockMvcRequestPostProcessors.csrf()` (cambia el repositorio CSRF del contexto compartido); usa `SpaCsrf.spaCsrf()`. Tests web con `@WebMvcTest` → `@Import(WebSliceSecurity.class)`.
 - Tenancy: el tenant se fija al **abrir la sesión** de Hibernate; para cruzar negocios, `SystemTransactions` (nunca dentro de otra transacción).
+- Hibernate 7 **no** da nombre a las violaciones de `EXCLUDE` (23P01): `ApiExceptionHandler` lo lee de la `PSQLException`. Para un 409 nuevo, añade la restricción a su mapa `CONFLICTS`.
+- Next 16 + `cacheComponents`: `usePathname()` en un componente cliente bloquea el prerender de rutas con parámetros → envuélvelo en `Suspense` (ver `PanelShell`).
+- Vitest/jsdom: Radix necesita `ResizeObserver` (stub en `vitest.setup.ts`). Para nombres accesibles de botones con icono, usa `aria-label`, no `<span class="sr-only">`.
 - MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
 - Ante la duda, **lee la documentación de la versión instalada** antes de escribir código.
 
