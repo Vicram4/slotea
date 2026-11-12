@@ -4,6 +4,8 @@ Plataforma de reservas de citas para pequeños negocios (peluquerías, barbería
 
 > 🚧 En construcción. El README completo (capturas, diagrama y demo) llega con la v1.0.
 
+**En producción:** web en https://slotea.vercel.app (Vercel) · API en Cloud Run · PostgreSQL en Neon. Cada push a `main` con la CI en verde se despliega solo; una prueba de humo diaria vigila que todo responda. Detalles en [infra/](infra/).
+
 ## Stack
 
 | Parte | Tecnología |
