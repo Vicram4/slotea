@@ -1,0 +1,23 @@
+# Perfil de producción (Cloud Run + Neon). Lo activa SPRING_PROFILES_ACTIVE=prod en el Dockerfile.
+# DB_URL, DB_USER y DB_PASSWORD llegan como variables de entorno desde Secret Manager.
+spring:
+  datasource:
+    hikari:
+      # Neon Free limita las conexiones y Cloud Run puede levantar varias instancias.
+      maximum-pool-size: 5
+      minimum-idle: 0
+      # Hikari usa milisegundos.
+      # Neon suspende la BD tras unos minutos sin uso y corta las conexiones: no las retenemos.
+      idle-timeout: 60000 # 1 min
+      max-lifetime: 240000 # 4 min
+      connection-timeout: 15000 # 15 s: el primer acceso despierta a Neon y tarda unos segundos
+
+server:
+  # La petición llega por Vercel y el balanceador de Cloud Run: respetamos X-Forwarded-*.
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoint:
+    health:
+      show-details: never

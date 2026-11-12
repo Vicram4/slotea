@@ -1,0 +1,9 @@
+# Solo entra en la imagen lo necesario para compilar.
+target/
+.env
+.env.*
+*.iml
+.idea/
+.vscode/
+Dockerfile
+.dockerignore
