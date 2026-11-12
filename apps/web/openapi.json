@@ -108,7 +108,7 @@
     },
     "/api/v1/business" : {
       "get" : {
-        "operationId" : "get",
+        "operationId" : "get_2",
         "responses" : {
           "200" : {
             "content" : {
@@ -125,7 +125,7 @@
         "tags" : [ "business" ]
       },
       "patch" : {
-        "operationId" : "update",
+        "operationId" : "update_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -202,6 +202,101 @@
         "tags" : [ "business" ]
       }
     },
+    "/api/v1/closures" : {
+      "get" : {
+        "operationId" : "closures",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "staffId",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ClosureResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cierres del negocio y ausencias de profesionales que tocan el periodo [from, to]",
+        "tags" : [ "schedule" ]
+      },
+      "post" : {
+        "operationId" : "createClosure",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ClosureRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClosureResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Crear un cierre del negocio o una ausencia de un profesional (solo el dueño)",
+        "tags" : [ "schedule" ]
+      }
+    },
+    "/api/v1/closures/{id}" : {
+      "delete" : {
+        "operationId" : "deleteClosure",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Borrar un cierre (solo el dueño)",
+        "tags" : [ "schedule" ]
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "operationId" : "me",
@@ -238,6 +333,334 @@
         },
         "tags" : [ "ping-controller" ]
       }
+    },
+    "/api/v1/services" : {
+      "get" : {
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ServiceResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Servicios del negocio (activos e inactivos)",
+        "tags" : [ "services" ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ServiceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Crear un servicio (solo el dueño)",
+        "tags" : [ "services" ]
+      }
+    },
+    "/api/v1/services/{id}" : {
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Un servicio",
+        "tags" : [ "services" ]
+      },
+      "put" : {
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ServiceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Editar un servicio, también para activarlo o desactivarlo (solo el dueño)",
+        "tags" : [ "services" ]
+      }
+    },
+    "/api/v1/staff" : {
+      "get" : {
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/StaffResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Profesionales del negocio (activos e inactivos)",
+        "tags" : [ "staff" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StaffRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StaffResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Crear un profesional (solo el dueño)",
+        "tags" : [ "staff" ]
+      }
+    },
+    "/api/v1/staff/{id}" : {
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StaffResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Un profesional",
+        "tags" : [ "staff" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StaffRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StaffResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Editar un profesional, también para activarlo o desactivarlo (solo el dueño)",
+        "tags" : [ "staff" ]
+      }
+    },
+    "/api/v1/staff/{id}/services" : {
+      "put" : {
+        "operationId" : "replaceServices",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StaffServicesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StaffResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Sustituir los servicios que hace un profesional (solo el dueño)",
+        "tags" : [ "staff" ]
+      }
+    },
+    "/api/v1/staff/{staffId}/working-hours" : {
+      "get" : {
+        "operationId" : "weeklyHours",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "staffId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WeeklyHours"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Horario semanal de un profesional (hora local del negocio)",
+        "tags" : [ "schedule" ]
+      },
+      "put" : {
+        "operationId" : "replaceWeeklyHours",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "staffId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WeeklyHours"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WeeklyHours"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Sustituir el horario semanal de un profesional (solo el dueño)",
+        "tags" : [ "schedule" ]
+      }
     }
   },
   "components" : {
@@ -270,6 +693,58 @@
           }
         },
         "required" : [ "contactEmail", "createdAt", "demo", "id", "name", "slug", "timezone" ]
+      },
+      "ClosureRequest" : {
+        "type" : "object",
+        "properties" : {
+          "endDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "reason" : {
+            "type" : [ "string", "null" ],
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "staffId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "startDate" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "endDate", "startDate" ]
+      },
+      "ClosureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "endDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "reason" : {
+            "type" : [ "string", "null" ]
+          },
+          "staffId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "startDate" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "createdAt", "endDate", "id", "startDate" ]
       },
       "LoginRequest" : {
         "type" : "object",
@@ -370,6 +845,79 @@
         },
         "required" : [ "service", "status", "time" ]
       },
+      "ServiceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "active" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "bufferMin" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 0
+          },
+          "description" : {
+            "type" : [ "string", "null" ],
+            "maxLength" : 500,
+            "minLength" : 0
+          },
+          "durationMin" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 480,
+            "minimum" : 5
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 1,
+            "pattern" : "(?s).*\\S.*"
+          },
+          "priceCents" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "maximum" : 10000000,
+            "minimum" : 0
+          }
+        },
+        "required" : [ "durationMin", "name" ]
+      },
+      "ServiceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "bufferMin" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "description" : {
+            "type" : [ "string", "null" ]
+          },
+          "durationMin" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "priceCents" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        },
+        "required" : [ "active", "bufferMin", "createdAt", "durationMin", "id", "name" ]
+      },
       "SignupRequest" : {
         "type" : "object",
         "properties" : {
@@ -406,6 +954,94 @@
         },
         "required" : [ "businessName", "email", "fullName", "password", "slug" ]
       },
+      "StaffRequest" : {
+        "type" : "object",
+        "properties" : {
+          "active" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "displayName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 1,
+            "pattern" : "(?s).*\\S.*"
+          },
+          "userId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "displayName" ]
+      },
+      "StaffResponse" : {
+        "type" : "object",
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "serviceIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "userId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "active", "createdAt", "displayName", "id", "serviceIds" ]
+      },
+      "StaffServicesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "serviceIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            },
+            "maxItems" : 200,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "serviceIds" ]
+      },
+      "TimeSlot" : {
+        "type" : "object",
+        "properties" : {
+          "dayOfWeek" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "1 = lunes … 7 = domingo",
+            "maximum" : 7,
+            "minimum" : 1
+          },
+          "end" : {
+            "type" : "string",
+            "example" : "14:00",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          },
+          "start" : {
+            "type" : "string",
+            "example" : "09:30",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          }
+        },
+        "required" : [ "dayOfWeek", "end", "start" ]
+      },
       "UpdateBusinessRequest" : {
         "type" : "object",
         "properties" : {
@@ -441,6 +1077,20 @@
           }
         },
         "required" : [ "email", "fullName", "id" ]
+      },
+      "WeeklyHours" : {
+        "type" : "object",
+        "properties" : {
+          "slots" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TimeSlot"
+            },
+            "maxItems" : 70,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "slots" ]
       }
     }
   }

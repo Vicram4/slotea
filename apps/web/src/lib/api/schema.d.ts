@@ -97,14 +97,14 @@ export interface paths {
             cookie?: never;
         };
         /** Datos del negocio activo */
-        get: operations["get"];
+        get: operations["get_2"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /** Cambiar los datos del negocio (solo el dueño) */
-        patch: operations["update"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/api/v1/business/members": {
@@ -136,6 +136,41 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/closures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cierres del negocio y ausencias de profesionales que tocan el periodo [from, to] */
+        get: operations["closures"];
+        put?: never;
+        /** Crear un cierre del negocio o una ausencia de un profesional (solo el dueño) */
+        post: operations["createClosure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/closures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borrar un cierre (solo el dueño) */
+        delete: operations["deleteClosure"];
         options?: never;
         head?: never;
         patch?: never;
@@ -174,6 +209,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Servicios del negocio (activos e inactivos) */
+        get: operations["list_1"];
+        put?: never;
+        /** Crear un servicio (solo el dueño) */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Un servicio */
+        get: operations["get_1"];
+        /** Editar un servicio, también para activarlo o desactivarlo (solo el dueño) */
+        put: operations["update_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profesionales del negocio (activos e inactivos) */
+        get: operations["list"];
+        put?: never;
+        /** Crear un profesional (solo el dueño) */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Un profesional */
+        get: operations["get"];
+        /** Editar un profesional, también para activarlo o desactivarlo (solo el dueño) */
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/{id}/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Sustituir los servicios que hace un profesional (solo el dueño) */
+        put: operations["replaceServices"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/{staffId}/working-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Horario semanal de un profesional (hora local del negocio) */
+        get: operations["weeklyHours"];
+        /** Sustituir el horario semanal de un profesional (solo el dueño) */
+        put: operations["replaceWeeklyHours"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -188,6 +330,28 @@ export interface components {
             name: string;
             slug: string;
             timezone: string;
+        };
+        ClosureRequest: {
+            /** Format: date */
+            endDate: string;
+            reason?: string | null;
+            /** Format: uuid */
+            staffId?: string | null;
+            /** Format: date */
+            startDate: string;
+        };
+        ClosureResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date */
+            endDate: string;
+            /** Format: uuid */
+            id: string;
+            reason?: string | null;
+            /** Format: uuid */
+            staffId?: string | null;
+            /** Format: date */
+            startDate: string;
         };
         LoginRequest: {
             /** Format: email */
@@ -223,6 +387,32 @@ export interface components {
             /** Format: date-time */
             time: string;
         };
+        ServiceRequest: {
+            active?: boolean | null;
+            /** Format: int32 */
+            bufferMin?: number | null;
+            description?: string | null;
+            /** Format: int32 */
+            durationMin: number;
+            name: string;
+            /** Format: int32 */
+            priceCents?: number | null;
+        };
+        ServiceResponse: {
+            active: boolean;
+            /** Format: int32 */
+            bufferMin: number;
+            /** Format: date-time */
+            createdAt: string;
+            description?: string | null;
+            /** Format: int32 */
+            durationMin: number;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int32 */
+            priceCents?: number | null;
+        };
         SignupRequest: {
             businessName: string;
             /** Format: email */
@@ -231,6 +421,37 @@ export interface components {
             password: string;
             slug: string;
             timezone?: string | null;
+        };
+        StaffRequest: {
+            active?: boolean | null;
+            displayName: string;
+            /** Format: uuid */
+            userId?: string | null;
+        };
+        StaffResponse: {
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            displayName: string;
+            /** Format: uuid */
+            id: string;
+            serviceIds: string[];
+            /** Format: uuid */
+            userId?: string | null;
+        };
+        StaffServicesRequest: {
+            serviceIds: string[];
+        };
+        TimeSlot: {
+            /**
+             * Format: int32
+             * @description 1 = lunes … 7 = domingo
+             */
+            dayOfWeek: number;
+            /** @example 14:00 */
+            end: string;
+            /** @example 09:30 */
+            start: string;
         };
         UpdateBusinessRequest: {
             /** Format: email */
@@ -243,6 +464,9 @@ export interface components {
             fullName: string;
             /** Format: uuid */
             id: string;
+        };
+        WeeklyHours: {
+            slots: components["schemas"]["TimeSlot"][];
         };
     };
     responses: never;
@@ -357,7 +581,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -377,7 +601,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -443,6 +667,74 @@ export interface operations {
             };
         };
     };
+    closures: {
+        parameters: {
+            query?: {
+                staffId?: string | null;
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureResponse"][];
+                };
+            };
+        };
+    };
+    createClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClosureRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureResponse"];
+                };
+            };
+        };
+    };
+    deleteClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -479,6 +771,264 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PingResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"][];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffResponse"][];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffResponse"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffResponse"];
+                };
+            };
+        };
+    };
+    replaceServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffServicesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffResponse"];
+                };
+            };
+        };
+    };
+    weeklyHours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staffId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyHours"];
+                };
+            };
+        };
+    };
+    replaceWeeklyHours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staffId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyHours"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyHours"];
                 };
             };
         };
