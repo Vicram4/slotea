@@ -1,0 +1,21 @@
+# Plan B: la misma imagen de la API en Render (plan Free, Frankfurt, junto a Neon).
+# Se crea desde el panel de Render: New → Blueprint → este repo → Blueprint Path: infra/render/render.yaml
+# Normalmente está suspendido; si Cloud Run falla, se reanuda y se cambia API_URL en Vercel.
+services:
+  - type: web
+    name: slotea-api-planb
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerContext: ./apps/api
+    dockerfilePath: ./apps/api/Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: false # solo se despliega a mano: es un plan B, no un segundo entorno
+    envVars:
+      # Mismos valores que los secretos de GCP. Render los pide al crear el Blueprint (no van en el repo).
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
