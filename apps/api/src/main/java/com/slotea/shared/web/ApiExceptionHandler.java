@@ -3,9 +3,10 @@ package com.slotea.shared.web;
 import java.util.List;
 import java.util.Map;
 
-import org.hibernate.exception.ConstraintViolationException;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.ServerErrorMessage;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,7 +20,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 /**
  * Todos los errores salen como {@code ProblemDetail}. Añade la lista de campos inválidos (400)
- * y traduce las restricciones UNIQUE conocidas a 409 (por si dos peticiones compiten).
+ * y traduce las restricciones conocidas de la BD (UNIQUE, EXCLUDE) a 409: la aplicación valida
+ * antes, pero si dos peticiones compiten, la última palabra la tiene PostgreSQL.
  */
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -27,7 +29,10 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     /** Restricción de la BD → mensaje para el usuario. */
     private static final Map<String, String> CONFLICTS = Map.of(
             "app_user_email_key", "Ya existe una cuenta con ese email.",
-            "business_slug_key", "Esa dirección ya está en uso. Prueba con otra.");
+            "business_slug_key", "Esa dirección ya está en uso. Prueba con otra.",
+            "service_business_name_key", "Ya tienes un servicio con ese nombre.",
+            "staff_member_business_user_key", "Ese usuario ya tiene ficha de profesional.",
+            "working_hours_no_overlap", "Los tramos del horario se solapan.");
 
     @Override
     protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
@@ -41,17 +46,27 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
+    /**
+     * Hibernate no traduce todas las violaciones a {@code ConstraintViolationException} (las de
+     * {@code EXCLUDE}, SQLState 23P01, no): leemos el nombre de la restricción del propio driver.
+     */
     @ExceptionHandler
-    ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
+    ProblemDetail handleDataAccess(DataAccessException ex) throws DataAccessException {
+        String message = CONFLICTS.get(violatedConstraint(ex));
+        if (message == null) {
+            throw ex;
+        }
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message);
+    }
+
+    static @Nullable String violatedConstraint(Throwable ex) {
         for (Throwable t = ex; t != null; t = t.getCause()) {
-            if (t instanceof ConstraintViolationException cve && cve.getConstraintName() != null) {
-                String message = CONFLICTS.get(cve.getConstraintName());
-                if (message != null) {
-                    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message);
-                }
+            if (t instanceof PSQLException psql) {
+                ServerErrorMessage server = psql.getServerErrorMessage();
+                return server == null ? null : server.getConstraint();
             }
         }
-        throw ex;
+        return null;
     }
 
     record FieldError(String field, @Nullable String message) {

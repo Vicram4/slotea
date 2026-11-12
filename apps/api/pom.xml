@@ -55,7 +55,7 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
+			<!-- compile: ApiExceptionHandler lee el nombre de la restricción violada (PSQLException). -->
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
