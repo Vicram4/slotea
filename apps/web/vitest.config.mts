@@ -8,5 +8,8 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     restoreMocks: true,
+    // Zona horaria fija: el runner de CI está en UTC y sin esto los tests dependerían del equipo.
+    // El caso «navegador en otra zona» se prueba aparte, simulando la zona del navegador.
+    env: { TZ: "Europe/Madrid" },
   },
 });

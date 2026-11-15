@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Availability, ManagedAppointment, PublicBusiness } from "@/lib/booking";
 import { addDays, todayIn } from "@/lib/dates";
@@ -99,6 +99,19 @@ describe("ManageAppointmentPage", () => {
     expect(screen.getByText("09:00 – 09:30")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cambiar hora" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancelar cita" })).toBeInTheDocument();
+  });
+
+  it("names the business time zone when the browser is in another one", async () => {
+    const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockImplementation(function (
+      this: Intl.DateTimeFormat,
+    ) {
+      return { ...resolved.call(this), timeZone: "America/New_York" };
+    });
+    appointmentIs(confirmed);
+    renderWithQuery(<ManageAppointmentPage slug={SLUG} token={TOKEN} />);
+
+    expect(await screen.findByText("09:00 – 09:30 (Europe/Madrid)")).toBeInTheDocument();
   });
 
   it("explains an invalid link", async () => {
