@@ -243,6 +243,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** La cita del enlace. 404 si el enlace no es válido (o es de otro negocio) */
+        get: operations["get_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Huecos para mover la cita (mismo servicio, máx. 14 días). La propia cita no ocupa */
+        get: operations["availability_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancelar la cita (hasta 2 h antes). Repetirlo no hace nada */
+        post: operations["cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cambiar la hora (hasta 2 h antes). 409 si el hueco ya no está libre */
+        post: operations["reschedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/businesses/{slug}/availability": {
         parameters: {
             query?: never;
@@ -393,6 +461,7 @@ export interface components {
             endsAt: string;
             /** Format: uuid */
             id: string;
+            manageToken: string;
             serviceName: string;
             staffName: string;
             /** Format: date-time */
@@ -450,6 +519,33 @@ export interface components {
             email: string;
             password: string;
         };
+        ManagedAppointmentResponse: {
+            changeable: boolean;
+            /** Format: date-time */
+            changeableUntil: string;
+            customerName: string;
+            /** Format: date */
+            date: string;
+            /** @example 10:45 */
+            endTime: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            serviceId: string;
+            serviceName: string;
+            /** Format: uuid */
+            staffId: string;
+            staffName: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** @enum {string} */
+            status: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+            /** @example 10:15 */
+            time: string;
+            timezone: string;
+        };
         MeResponse: {
             activeBusiness?: components["schemas"]["MembershipSummary"] | null;
             memberships: components["schemas"]["MembershipSummary"][];
@@ -502,6 +598,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             serviceIds: string[];
+        };
+        RescheduleRequest: {
+            /** Format: uuid */
+            staffId?: string | null;
+            /** Format: date-time */
+            startsAt: string;
         };
         ServiceRequest: {
             active?: boolean | null;
@@ -941,6 +1043,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingResponse"];
+                };
+            };
+        };
+    };
+    get_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedAppointmentResponse"];
+                };
+            };
+        };
+    };
+    availability_1: {
+        parameters: {
+            query: {
+                staffId?: string | null;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponse"];
+                };
+            };
+        };
+    };
+    cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedAppointmentResponse"];
+                };
+            };
+        };
+    };
+    reschedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedAppointmentResponse"];
                 };
             };
         };

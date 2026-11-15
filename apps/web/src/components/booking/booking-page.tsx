@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarCheck } from "lucide-react";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
 
@@ -14,17 +15,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ApiError } from "@/lib/api/client";
 import {
   type Booking,
-  HORIZON_DAYS,
+  manageHref,
   type PublicBusiness,
   type Slot,
   useBook,
   usePublicBusiness,
   useWeekAvailability,
 } from "@/lib/booking";
-import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, shortDay, todayIn } from "@/lib/dates";
+import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { customerSchema, type CustomerData, type CustomerValues } from "@/lib/validation/booking";
 import { formatDuration, formatPrice } from "@/lib/validation/catalog";
+
+import { TimePicker } from "./time-picker";
 
 /** Página pública de reservas de un negocio: servicio → profesional → día y hora → datos. */
 export function BookingPage({ slug }: { slug: string }) {
@@ -44,7 +47,7 @@ export function BookingPage({ slug }: { slug: string }) {
       </Alert>
     );
   }
-  if (booking) return <BookingConfirmation booking={booking} onAgain={() => setBooking(null)} />;
+  if (booking) return <BookingConfirmation slug={slug} booking={booking} onAgain={() => setBooking(null)} />;
   return <BookingFlow slug={slug} business={business.data} onBooked={setBooking} />;
 }
 
@@ -76,6 +79,7 @@ function BookingFlow({
   });
 
   const service = business.services.find((s) => s.id === serviceId) ?? null;
+  const availability = useWeekAvailability(slug, service?.id ?? null, staffId || null, weekStart, addDays(weekStart, 6));
   const staffForService = business.staff.filter((s) => serviceId && s.serviceIds.includes(serviceId));
 
   const resetTime = () => {
@@ -171,9 +175,7 @@ function BookingFlow({
             </Alert>
           )}
           <TimePicker
-            slug={slug}
-            serviceId={service.id}
-            staffId={staffId || null}
+            availability={availability}
             timezone={business.timezone}
             today={today}
             weekStart={weekStart}
@@ -224,145 +226,6 @@ function BusinessHeader({ business }: { business: PublicBusiness }) {
       <h1 className="text-3xl font-bold tracking-tight">{business.name}</h1>
       <p className="text-muted-foreground">Reserva tu cita online.</p>
     </header>
-  );
-}
-
-function TimePicker({
-  slug,
-  serviceId,
-  staffId,
-  timezone,
-  today,
-  weekStart,
-  onWeekChange,
-  date,
-  onDateChange,
-  slot,
-  onSlotChange,
-}: {
-  slug: string;
-  serviceId: string;
-  staffId: string | null;
-  timezone: string;
-  today: IsoDate;
-  weekStart: IsoDate;
-  onWeekChange: (start: IsoDate) => void;
-  date: IsoDate | null;
-  onDateChange: (date: IsoDate) => void;
-  slot: Slot | null;
-  onSlotChange: (slot: Slot, date: IsoDate) => void;
-}) {
-  const weekEnd = addDays(weekStart, 6);
-  const availability = useWeekAvailability(slug, serviceId, staffId, weekStart, weekEnd);
-  const lastDay = addDays(today, HORIZON_DAYS);
-
-  if (availability.isPending) return <p role="status">Buscando huecos…</p>;
-  if (availability.isError) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>No se pudieron cargar los huecos. Inténtalo de nuevo.</AlertDescription>
-      </Alert>
-    );
-  }
-
-  const days = availability.data.days;
-  // Si no se ha elegido día (o ya no está en esta semana), el primero con huecos.
-  const selected = days.find((d) => d.date === date) ?? days.find((d) => d.slots.length > 0) ?? null;
-  const morning = selected?.slots.filter((s) => s.time < "14:00") ?? [];
-  const afternoon = selected?.slots.filter((s) => s.time >= "14:00") ?? [];
-
-  return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Semana anterior"
-          disabled={weekStart <= today}
-          onClick={() => onWeekChange(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))}
-        >
-          <ChevronLeft aria-hidden />
-        </Button>
-        <div className="grid flex-1 grid-cols-7 gap-1" aria-busy={availability.isFetching}>
-          {days.map((day) => {
-            const label = shortDay(day.date);
-            const empty = day.slots.length === 0;
-            return (
-              <button
-                key={day.date}
-                type="button"
-                disabled={empty}
-                aria-pressed={day.date === selected?.date}
-                aria-label={`${label.weekday} ${label.dayMonth}${empty ? " (sin huecos)" : ""}`}
-                onClick={() => onDateChange(day.date)}
-                className={cn(
-                  "grid rounded-md border px-1 py-2 text-center text-xs disabled:opacity-40",
-                  day.date === selected?.date ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent",
-                )}
-              >
-                <span className="capitalize">{label.weekday}</span>
-                <span className="font-medium">{label.dayMonth}</span>
-              </button>
-            );
-          })}
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Semana siguiente"
-          disabled={addDays(weekStart, 7) > lastDay}
-          onClick={() => onWeekChange(addDays(weekStart, 7))}
-        >
-          <ChevronRight aria-hidden />
-        </Button>
-      </div>
-
-      {selected ? (
-        <div className="grid gap-3">
-          <p className="text-sm font-medium first-letter:uppercase">{formatLongDate(selected.date)}</p>
-          <SlotGroup title="Mañana" slots={morning} selected={slot} onSelect={(s) => onSlotChange(s, selected.date)} />
-          <SlotGroup title="Tarde" slots={afternoon} selected={slot} onSelect={(s) => onSlotChange(s, selected.date)} />
-          {isOtherTimeZone(timezone) && (
-            <p className="text-muted-foreground text-sm">Horas en la zona horaria del negocio ({timezone}).</p>
-          )}
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">No hay huecos libres esta semana. Prueba con la siguiente.</p>
-      )}
-    </div>
-  );
-}
-
-function SlotGroup({
-  title,
-  slots,
-  selected,
-  onSelect,
-}: {
-  title: string;
-  slots: Slot[];
-  selected: Slot | null;
-  onSelect: (slot: Slot) => void;
-}) {
-  if (slots.length === 0) return null;
-  return (
-    <div role="group" aria-label={title} className="grid gap-2">
-      <h3 className="text-muted-foreground text-sm">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {slots.map((s) => (
-          <Button
-            key={s.startsAt}
-            type="button"
-            size="sm"
-            variant={s.startsAt === selected?.startsAt ? "default" : "outline"}
-            aria-pressed={s.startsAt === selected?.startsAt}
-            onClick={() => onSelect(s)}
-          >
-            {s.time}
-          </Button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -456,7 +319,7 @@ function CustomerSection({
   );
 }
 
-function BookingConfirmation({ booking, onAgain }: { booking: Booking; onAgain: () => void }) {
+function BookingConfirmation({ slug, booking, onAgain }: { slug: string; booking: Booking; onAgain: () => void }) {
   return (
     <Card>
       <CardHeader>
@@ -464,7 +327,10 @@ function BookingConfirmation({ booking, onAgain }: { booking: Booking; onAgain: 
           <CalendarCheck className="size-6 text-green-600" aria-hidden />
           ¡Reserva confirmada!
         </CardTitle>
-        <CardDescription>Te esperamos. Guarda estos datos de tu cita.</CardDescription>
+        <CardDescription>
+          Te hemos enviado un email a <strong>{booking.customerEmail}</strong> con los datos y un enlace para
+          cambiarla o cancelarla. Si no lo ves, mira en la carpeta de spam.
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
@@ -479,12 +345,15 @@ function BookingConfirmation({ booking, onAgain }: { booking: Booking; onAgain: 
             {booking.time}
             {isOtherTimeZone(booking.timezone) && ` (${booking.timezone})`}
           </dd>
-          <dt className="text-muted-foreground">Email</dt>
-          <dd className="font-medium">{booking.customerEmail}</dd>
         </dl>
-        <Button variant="outline" onClick={onAgain} className="justify-self-start">
-          Hacer otra reserva
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link href={manageHref(slug, booking.manageToken)}>Ver o cambiar mi cita</Link>
+          </Button>
+          <Button variant="outline" onClick={onAgain}>
+            Hacer otra reserva
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

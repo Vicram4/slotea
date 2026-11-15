@@ -54,6 +54,7 @@ function confirmation(startsAt: string, staffName = "Ana"): Booking {
     time: "16:00",
     timezone: "Europe/Madrid",
     customerEmail: "laura@example.test",
+    manageToken: "tok_123",
   };
 }
 
@@ -120,6 +121,11 @@ describe("BookingPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Confirmar reserva" }));
 
     expect(await screen.findByText("¡Reserva confirmada!")).toBeInTheDocument();
+    expect(screen.getByText("laura@example.test")).toBeInTheDocument(); // «te hemos enviado un email a…»
+    expect(screen.getByRole("link", { name: "Ver o cambiar mi cita" })).toHaveAttribute(
+      "href",
+      `/${SLUG}/cita/tok_123`,
+    );
     expect(body).toEqual({
       serviceId: "s-corte",
       staffId: null,

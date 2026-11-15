@@ -1,0 +1,37 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
+
+import { ManageAppointmentPage } from "@/components/booking/manage-appointment-page";
+
+/**
+ * El enlace del email para gestionar una cita sin cuenta. La URL lleva el token, así que:
+ * `no-referrer` (no sale a otras webs al pulsar un enlace) y `noindex` (no aparece en buscadores).
+ */
+export const metadata: Metadata = {
+  title: "Tu cita · Slotea",
+  referrer: "no-referrer",
+  robots: { index: false, follow: false },
+};
+
+export default function Page({ params }: PageProps<"/[slug]/cita/[token]">) {
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-6 py-10">
+      {/* Con cacheComponents, `params` es un dato de la petición: se espera dentro de un Suspense. */}
+      <Suspense fallback={<p role="status">Cargando…</p>}>
+        <ManageRoute params={params} />
+      </Suspense>
+      <footer className="text-muted-foreground mt-auto text-center text-xs">
+        Reservas con{" "}
+        <Link href="/" className="underline-offset-4 hover:underline">
+          Slotea
+        </Link>
+      </footer>
+    </main>
+  );
+}
+
+async function ManageRoute({ params }: { params: PageProps<"/[slug]/cita/[token]">["params"] }) {
+  const { slug, token } = await params;
+  return <ManageAppointmentPage slug={slug} token={token} />;
+}
