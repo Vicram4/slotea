@@ -29,3 +29,17 @@ jobs:
         run: |
           curl -fsS --retry 3 --retry-all-errors --max-time 90 -X POST \
             -H "Content-Length: 0" -H "X-Jobs-Token: $JOBS_TOKEN" "$API_URL/internal/jobs/outbox"
+
+  demo-cleanup:
+    name: Delete expired demo copies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Las copias de la demo caducan a las 24 h. Va en el mismo cron que la outbox: la API y Neon ya
+      # están despiertos, así que no suma consumo. Idempotente.
+      - name: POST /internal/jobs/demo-cleanup
+        env:
+          JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
+        run: |
+          curl -fsS --retry 3 --retry-all-errors --max-time 90 -X POST \
+            -H "Content-Length: 0" -H "X-Jobs-Token: $JOBS_TOKEN" "$API_URL/internal/jobs/demo-cleanup"
