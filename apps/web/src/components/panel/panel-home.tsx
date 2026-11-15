@@ -1,92 +1,109 @@
 "use client";
 
-import { Check, CheckCircle2, Circle, Copy } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Circle, Copy } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAgenda, useBusiness } from "@/lib/agenda";
 import { useCanEdit, useSaveStaff, useServices, useStaff } from "@/lib/catalog";
-import { todayIn } from "@/lib/dates";
+import { formatLongDate, todayIn, type IsoDate } from "@/lib/dates";
 import { roleLabels, useMe } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
-/** Inicio del panel: quién soy y qué falta para que el negocio pueda recibir reservas. */
+import { PageHeader } from "./page-header";
+
+/** Inicio del panel: las citas de hoy, el enlace para compartir y lo que falte por configurar. */
 export function PanelHome() {
   const me = useMe().data;
+  const business = useBusiness();
   if (!me?.activeBusiness) return null;
   const { user, activeBusiness } = me;
+  const today = business.data ? todayIn(business.data.timezone) : undefined;
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Hola, {user.fullName}</CardTitle>
-          <CardDescription>{user.email}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Negocio</dt>
-            <dd className="font-medium">{activeBusiness.name}</dd>
-            <dt className="text-muted-foreground">Tu página</dt>
-            <dd>
-              <BookingPageLink slug={activeBusiness.slug} />
-            </dd>
-            <dt className="text-muted-foreground">Tu rol</dt>
-            <dd className="font-medium">{roleLabels[activeBusiness.role]}</dd>
-          </dl>
-        </CardContent>
-      </Card>
-      <TodayCard />
-      <SetupChecklist userId={user.id} fullName={user.fullName} />
+      <PageHeader
+        title={`Hola, ${user.fullName}`}
+        description={
+          <>
+            {today && <span className="first-letter:uppercase">{formatLongDate(today)} · </span>}
+            {roleLabels[activeBusiness.role]} en {activeBusiness.name}
+          </>
+        }
+      />
+      <div className="grid items-start gap-8 lg:grid-cols-[1fr_20rem]">
+        <TodaySection today={today} businessError={business.isError} />
+        <div className="grid min-w-0 gap-6">
+          <section aria-labelledby="booking-page-title" className="grid min-w-0 gap-3 rounded-lg border p-4">
+            <div className="grid gap-1">
+              <h2 id="booking-page-title" className="text-sm font-medium">
+                Tu página de reservas
+              </h2>
+              <p className="text-muted-foreground text-xs">
+                Compártela con tus clientes: en tu perfil de Instagram, en Google o por WhatsApp.
+              </p>
+            </div>
+            <BookingPageLink slug={activeBusiness.slug} />
+          </section>
+          <SetupChecklist userId={user.id} fullName={user.fullName} />
+        </div>
+      </div>
     </>
   );
 }
 
 /** Las citas de hoy de un vistazo (para el empleado, solo las suyas: lo decide la API). */
-function TodayCard() {
-  const business = useBusiness();
-  const today = business.data ? todayIn(business.data.timezone) : "";
-  const agenda = useAgenda({ from: today, to: today }, !!business.data);
+function TodaySection({ today, businessError }: { today?: IsoDate; businessError: boolean }) {
+  const agenda = useAgenda({ from: today ?? "", to: today ?? "" }, !!today);
   const active = agenda.data?.appointments.filter((a) => a.status !== "CANCELLED") ?? [];
+  const showStaff = (agenda.data?.staff.length ?? 0) > 1;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Hoy</CardTitle>
-        <CardDescription>
-          {agenda.isSuccess
-            ? active.length === 0
-              ? "No hay citas para hoy."
-              : `${active.length} ${active.length === 1 ? "cita" : "citas"}`
-            : agenda.isError || business.isError
-              ? "No se pudieron cargar las citas de hoy."
-              : "Cargando…"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        {active.length > 0 && (
-          <ul className="grid gap-1 text-sm">
-            {active.map((a) => (
-              <li key={a.id} className="flex gap-3">
-                <span className="w-12 font-medium tabular-nums">{a.startTime}</span>
-                <span>
-                  {a.customer.fullName} · {a.serviceName}
-                  {agenda.data && agenda.data.staff.length > 1 && (
-                    <span className="text-muted-foreground"> · {a.staffName}</span>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <Link href="/panel/agenda" className="text-sm font-medium underline-offset-4 hover:underline">
-          Abrir la agenda
+    <section aria-labelledby="today-title" className="grid gap-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 id="today-title" className="text-sm font-medium">
+          Hoy
+          <span className="text-muted-foreground font-normal">
+            {" · "}
+            {agenda.isSuccess
+              ? active.length === 0
+                ? "sin citas"
+                : `${active.length} ${active.length === 1 ? "cita" : "citas"}`
+              : agenda.isError || businessError
+                ? "no se pudieron cargar las citas"
+                : "cargando…"}
+          </span>
+        </h2>
+        <Link
+          href="/panel/agenda"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm"
+        >
+          Abrir la agenda <ArrowRight className="size-3.5" aria-hidden />
         </Link>
-      </CardContent>
-    </Card>
+      </div>
+      {agenda.isSuccess && active.length === 0 && (
+        <p className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
+          No hay citas para hoy.
+        </p>
+      )}
+      {active.length > 0 && (
+        <ul aria-label="Citas de hoy" className="divide-y rounded-lg border">
+          {active.map((a) => (
+            <li key={a.id} className="flex items-center gap-4 px-4 py-3 text-sm">
+              <span className="w-12 font-medium tabular-nums">{a.startTime}</span>
+              <span className="grid min-w-0 flex-1">
+                <span className="truncate font-medium">{a.customer.fullName}</span>
+                <span className="text-muted-foreground truncate">{a.serviceName}</span>
+              </span>
+              {showStaff && <span className="text-muted-foreground text-xs">{a.staffName}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -100,19 +117,25 @@ function BookingPageLink({ slug }: { slug: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <span className="flex flex-wrap items-center gap-2">
-      <a href={`/${slug}`} target="_blank" rel="noreferrer" className="font-medium underline-offset-4 hover:underline">
+    <div className="flex min-w-0 items-center gap-1 rounded-md border py-1 pr-1 pl-3">
+      <a
+        href={`/${slug}`}
+        target="_blank"
+        rel="noreferrer"
+        className="min-w-0 flex-1 truncate text-sm font-medium underline-offset-4 hover:underline"
+      >
         {url.replace(/^https?:\/\//, "")}
       </a>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Copiar enlace" onClick={copy}>
+      <Button variant="ghost" size="sm" aria-label="Copiar enlace" onClick={copy}>
         {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+        <span aria-hidden>{copied ? "Copiado" : "Copiar"}</span>
       </Button>
       {copied && (
-        <span role="status" className="text-muted-foreground text-xs">
+        <span role="status" className="sr-only">
           Copiado
         </span>
       )}
-    </span>
+    </div>
   );
 }
 
@@ -147,6 +170,10 @@ function SetupChecklist({ userId, fullName }: { userId: string; fullName: string
     },
   ];
   const amStaff = staff.data.some((s) => s.userId === userId);
+  const pending = steps.filter((step) => !step.done).length;
+  const offerAddMe = canEdit && !amStaff;
+  // Con todo listo, la lista sobra: solo queda la invitación a añadirse (si procede).
+  if (pending === 0 && !offerAddMe) return null;
 
   const onAddMe = async () => {
     const created = await addMe.mutateAsync({ body: { displayName: fullName, userId } }).catch(() => null);
@@ -154,37 +181,58 @@ function SetupChecklist({ userId, fullName }: { userId: string; fullName: string
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Configura tu negocio</CardTitle>
-        <CardDescription>Cuando esté todo listo, tus clientes podrán reservar en tu página.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <ol className="grid gap-3">
-          {steps.map((step) => (
-            <li key={step.label} className="flex items-center gap-3">
-              {step.done ? (
-                <CheckCircle2 className="size-5 text-green-600" aria-hidden />
-              ) : (
-                <Circle className="text-muted-foreground size-5" aria-hidden />
-              )}
-              <Link href={step.href} className="underline-offset-4 hover:underline">
-                {step.label}
-              </Link>
-              <span className="sr-only">{step.done ? "(hecho)" : "(pendiente)"}</span>
-            </li>
-          ))}
-        </ol>
-        {canEdit && !amStaff && (
-          <div className="flex flex-wrap items-center gap-3 border-t pt-4 text-sm">
-            <span>¿También atiendes tú a los clientes?</span>
-            <Button size="sm" onClick={onAddMe} disabled={addMe.isPending}>
-              {addMe.isPending ? "Añadiendo…" : "Añádete como profesional"}
-            </Button>
-            {addMe.isError && <span className="text-destructive">No se pudo añadir. Inténtalo de nuevo.</span>}
+    <section aria-labelledby="setup-title" className="grid gap-3 rounded-lg border p-4">
+      {pending > 0 && (
+        <>
+          <div className="grid gap-1">
+            <h2 id="setup-title" className="text-sm font-medium">
+              Configura tu negocio
+            </h2>
+            <p className="text-muted-foreground text-xs">
+              {pending === 1 ? "Te queda un paso" : `Te quedan ${pending} pasos`} para que tus clientes puedan
+              reservar.
+            </p>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <ol className="grid gap-2 text-sm">
+            {steps.map((step) => (
+              <li key={step.label} className="flex items-start gap-2.5">
+                {step.done ? (
+                  <CheckCircle2 className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
+                ) : (
+                  <Circle className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
+                )}
+                <Link
+                  href={step.href}
+                  className={cn("underline-offset-4 hover:underline", step.done && "text-muted-foreground line-through")}
+                >
+                  {step.label}
+                </Link>
+                <span className="sr-only">{step.done ? "(hecho)" : "(pendiente)"}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {offerAddMe && (
+        <div className={cn("grid gap-2 text-sm", pending > 0 && "border-t pt-3")}>
+          {pending === 0 && (
+            <h2 id="setup-title" className="text-sm font-medium">
+              ¿También atiendes tú?
+            </h2>
+          )}
+          <p className="text-muted-foreground text-xs">Añádete como profesional y tus clientes podrán reservar contigo.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onAddMe}
+            disabled={addMe.isPending}
+            className="justify-self-start"
+          >
+            {addMe.isPending ? "Añadiendo…" : "Añádete como profesional"}
+          </Button>
+          {addMe.isError && <span className="text-destructive">No se pudo añadir. Inténtalo de nuevo.</span>}
+        </div>
+      )}
+    </section>
   );
 }

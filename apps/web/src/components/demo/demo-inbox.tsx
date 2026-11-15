@@ -3,6 +3,7 @@
 import { Inbox } from "lucide-react";
 import { useState } from "react";
 
+import { PageHeader } from "@/components/panel/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ApiError } from "@/lib/api/client";
 import { type InboxEmail, useDemoEmail, useDemoInbox } from "@/lib/demo";
@@ -27,13 +28,10 @@ export function DemoInbox() {
 
   return (
     <>
-      <header>
-        <h1 className="text-2xl font-semibold">Bandeja de la demo</h1>
-        <p className="text-muted-foreground text-sm">
-          En la demo no se envía ningún email: aquí ves los que habrían recibido el cliente y el negocio. Reserva,
-          cambia o cancela una cita como cliente y vuelve aquí.
-        </p>
-      </header>
+      <PageHeader
+        title="Bandeja de la demo"
+        description="En la demo no se envía ningún email: aquí ves los que habrían recibido el cliente y el negocio. Reserva, cambia o cancela una cita como cliente y vuelve aquí."
+      />
       {isDemoOwner ? (
         <InboxContent />
       ) : (
@@ -72,8 +70,8 @@ function InboxContent() {
 
   const current = selected ?? inbox.data[0]!.id;
   return (
-    <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
-      <ul aria-label="Emails" className="grid content-start gap-2">
+    <div className="grid items-start gap-4 lg:grid-cols-[20rem_1fr]">
+      <ul aria-label="Emails" className="divide-y overflow-hidden rounded-lg border">
         {inbox.data.map((email) => (
           <li key={email.id}>
             <EmailRow email={email} current={email.id === current} onSelect={() => setSelected(email.id)} />
@@ -92,20 +90,13 @@ function EmailRow({ email, current, onSelect }: { email: InboxEmail; current: bo
       onClick={onSelect}
       aria-pressed={current}
       className={cn(
-        "hover:bg-accent grid w-full gap-1 rounded-lg border p-3 text-left text-sm",
-        current && "border-primary ring-primary/30 ring-2",
+        "grid w-full gap-1 border-l-2 px-4 py-3 text-left text-sm",
+        current ? "border-l-primary bg-muted/60" : "hover:bg-muted/40 border-l-transparent",
       )}
     >
-      <span className="flex items-center justify-between gap-2 text-xs">
-        <span
-          className={cn(
-            "rounded px-1.5 py-0.5 font-medium",
-            email.toBusiness ? "bg-sky-100 text-sky-900" : "bg-emerald-100 text-emerald-900",
-          )}
-        >
-          {email.toBusiness ? "Al negocio" : "Al cliente"}
-        </span>
-        <span className="text-muted-foreground">{SENT_AT.format(new Date(email.createdAt))}</span>
+      <span className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium">{email.toBusiness ? "Al negocio" : "Al cliente"}</span>
+        <span className="tabular-nums">{SENT_AT.format(new Date(email.createdAt))}</span>
       </span>
       <span className="font-medium">{email.subject}</span>
       <span className="text-muted-foreground truncate text-xs">Para: {email.to}</span>
@@ -125,15 +116,17 @@ function EmailPreview({ id }: { id: string }) {
   }
   const { subject, to, html } = email.data;
   return (
-    <article aria-label={subject} className="grid content-start gap-2 rounded-lg border p-4">
-      <h2 className="font-semibold">{subject}</h2>
-      <p className="text-muted-foreground text-sm">Para: {to}</p>
+    <article aria-label={subject} className="grid content-start overflow-hidden rounded-lg border">
+      <div className="grid gap-0.5 border-b px-4 py-3">
+        <h2 className="font-semibold">{subject}</h2>
+        <p className="text-muted-foreground text-sm">Para: {to}</p>
+      </div>
       {/* Sin allow-scripts ni allow-same-origin: el HTML del email no puede ejecutar nada ni leer la sesión. */}
       <iframe
         title={`Contenido del email: ${subject}`}
         srcDoc={emailDocument(html)}
         sandbox="allow-popups allow-popups-to-escape-sandbox"
-        className="h-[36rem] w-full rounded border bg-white"
+        className="h-[36rem] w-full bg-white"
       />
     </article>
   );

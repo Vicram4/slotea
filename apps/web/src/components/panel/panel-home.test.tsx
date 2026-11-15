@@ -30,7 +30,8 @@ describe("PanelHome", () => {
 
     expect(await screen.findByText("Hola, Ana Demo")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /\/barberia-demo$/ })).toHaveAttribute("href", "/barberia-demo");
-    expect(screen.getByText("Dueño")).toBeInTheDocument();
+    expect(screen.getByText(/Dueño en Barbería Demo/)).toBeInTheDocument();
+    expect(await screen.findByText("Te quedan 2 pasos para que tus clientes puedan reservar.")).toBeInTheDocument();
     const steps = await screen.findAllByRole("listitem");
     expect(steps.map((step) => step.textContent)).toEqual([
       "Crea los servicios que ofreces(hecho)",
@@ -59,12 +60,29 @@ describe("PanelHome", () => {
     expect(body).toEqual({ displayName: "Ana Demo", userId: ownerMe.user.id });
   });
 
+  it("hides the checklist once everything is set up", async () => {
+    const owner = { ...ana, userId: ownerMe.user.id };
+    server.use(
+      http.get("/api/v1/me", () => HttpResponse.json(ownerMe)),
+      ...emptyAgendaHandlers(),
+      http.get("/api/v1/services", () => HttpResponse.json([corte])),
+      http.get("/api/v1/staff", () => HttpResponse.json([owner])),
+    );
+
+    renderWithQuery(<PanelHome />);
+
+    expect(await screen.findByText("No hay citas para hoy.")).toBeInTheDocument();
+    await vi.waitFor(() => expect(screen.queryByText("Cargando…")).not.toBeInTheDocument());
+    expect(screen.queryByText("Configura tu negocio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Añádete como profesional" })).not.toBeInTheDocument();
+  });
+
   it("does not offer setup actions to staff", async () => {
     server.use(
       http.get("/api/v1/me", () => HttpResponse.json(staffMe)),
       ...emptyAgendaHandlers(),
       http.get("/api/v1/services", () => HttpResponse.json([corte])),
-      http.get("/api/v1/staff", () => HttpResponse.json([ana])),
+      http.get("/api/v1/staff", () => HttpResponse.json([])),
     );
 
     renderWithQuery(<PanelHome />);
@@ -90,8 +108,11 @@ describe("PanelHome", () => {
 
     renderWithQuery(<PanelHome />);
 
-    expect(await screen.findByText("1 cita")).toBeInTheDocument();
-    expect(screen.getByText("Laura Pérez · Corte")).toBeInTheDocument();
+    expect(await screen.findByText(/· 1 cita/)).toBeInTheDocument();
+    const today = screen.getByRole("list", { name: "Citas de hoy" });
+    expect(today).toHaveTextContent("Laura Pérez");
+    expect(today).toHaveTextContent("Corte");
+    expect(today.children).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Abrir la agenda" })).toHaveAttribute("href", "/panel/agenda");
     expect(query?.get("from")).toBe(query?.get("to"));
   });

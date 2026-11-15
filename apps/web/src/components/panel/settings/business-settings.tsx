@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check } from "lucide-react";
-import { type CSSProperties, useId, useState } from "react";
+import { type CSSProperties, type ReactNode, useId, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { SelectField } from "@/components/forms/fields";
@@ -10,7 +10,6 @@ import { FormField } from "@/components/forms/form-field";
 import { applyServerErrors } from "@/components/forms/server-errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Schemas } from "@/lib/api/client";
 import { useBusiness, useUpdateBusiness } from "@/lib/agenda";
@@ -84,18 +83,16 @@ function SettingsForm({ business }: { business: Schemas["BusinessResponse"] }) {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-6">
+    <form onSubmit={onSubmit} noValidate className="grid">
       {formError && (
         <Alert variant="destructive">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tu negocio</CardTitle>
-          <CardDescription>El nombre sale en tu página de reservas y en los emails a tus clientes.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
+      <SettingsSection
+        title="Tu negocio"
+        description="El nombre sale en tu página de reservas y en los emails a tus clientes."
+      >
           <FormField label="Nombre" error={errors.name?.message} {...register("name")} />
           <FormField
             label="Email de contacto"
@@ -116,18 +113,12 @@ function SettingsForm({ business }: { business: Schemas["BusinessResponse"] }) {
               </option>
             ))}
           </SelectField>
-        </CardContent>
-      </Card>
+      </SettingsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Color de marca</CardTitle>
-          <CardDescription>
-            Es el único color de tu página de reservas: botones, selección y enlaces. Tiene que leerse bien
-            sobre blanco.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <SettingsSection
+        title="Color de marca"
+        description="El único color de tu página de reservas y de este panel: botones, selección y enlaces. Tiene que leerse bien sobre blanco."
+      >
           <Controller
             control={control}
             name="brandColor"
@@ -140,20 +131,30 @@ function SettingsForm({ business }: { business: Schemas["BusinessResponse"] }) {
               />
             )}
           />
-        </CardContent>
-      </Card>
+      </SettingsSection>
 
-      <div className="flex items-center justify-end gap-4">
-        {saved && !isDirty && (
-          <p role="status" className="text-muted-foreground text-sm">
-            Cambios guardados.
-          </p>
-        )}
+      <div className="bg-background/95 sticky bottom-0 flex items-center justify-end gap-4 border-t py-4 backdrop-blur">
+        <p role="status" className="text-muted-foreground text-sm">
+          {isDirty ? "Tienes cambios sin guardar." : saved ? "Cambios guardados." : ""}
+        </p>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Una sección de ajustes: título y explicación a la izquierda, los campos a la derecha. */
+function SettingsSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return (
+    <section className="grid gap-4 border-t py-8 first-of-type:border-t-0 first-of-type:pt-2 md:grid-cols-[16rem_1fr] md:gap-10">
+      <div className="grid content-start gap-1">
+        <h2 className="text-sm font-medium">{title}</h2>
+        <p className="text-muted-foreground text-sm text-pretty">{description}</p>
+      </div>
+      <div className="grid max-w-xl content-start gap-4">{children}</div>
+    </section>
   );
 }
 
@@ -243,12 +244,12 @@ function BrandPreview({ color }: { color: string | null }) {
         className="grid w-56 gap-3 rounded-lg border p-4"
         style={color ? ({ "--primary": color, "--ring": color } as CSSProperties) : undefined}
       >
-        <div className="flex gap-2 text-sm" aria-hidden>
-          <span className="rounded-md border px-3 py-1.5 tabular-nums">10:00</span>
-          <span className="border-primary ring-primary/30 rounded-md border px-3 py-1.5 font-medium tabular-nums ring-2">
+        <div className="grid grid-cols-3 gap-2 text-center text-sm" aria-hidden>
+          <span className="rounded-md border py-1.5 tabular-nums">10:00</span>
+          <span className="border-primary ring-primary/30 rounded-md border py-1.5 font-medium tabular-nums ring-2">
             10:30
           </span>
-          <span className="rounded-md border px-3 py-1.5 tabular-nums">11:00</span>
+          <span className="rounded-md border py-1.5 tabular-nums">11:00</span>
         </div>
         <span
           aria-hidden
