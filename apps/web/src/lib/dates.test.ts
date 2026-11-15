@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { addDays, formatLongDate, shortDay, todayIn } from "./dates";
+import {
+  addDays,
+  formatLongDate,
+  formatWeekRange,
+  isIsoDate,
+  minutesNowIn,
+  shortDay,
+  startOfWeek,
+  todayIn,
+} from "./dates";
 
 describe("dates", () => {
   it("knows which day it is in the business time zone, not the browser's", () => {
@@ -21,5 +30,30 @@ describe("dates", () => {
   it("formats dates in Spanish without shifting the day", () => {
     expect(formatLongDate("2027-01-11")).toBe("lunes, 11 de enero de 2027");
     expect(shortDay("2027-03-28")).toEqual({ weekday: "dom", dayMonth: "28 mar" });
+  });
+
+  it("finds the Monday of the week", () => {
+    expect(startOfWeek("2026-11-23")).toBe("2026-11-23"); // lunes
+    expect(startOfWeek("2026-11-29")).toBe("2026-11-23"); // domingo
+    expect(startOfWeek("2027-01-01")).toBe("2026-12-28"); // viernes, semana entre dos años
+  });
+
+  it("accepts only real calendar dates from the URL", () => {
+    expect(isIsoDate("2026-11-23")).toBe(true);
+    expect(isIsoDate("2026-02-30")).toBe(false);
+    expect(isIsoDate("23/11/2026")).toBe(false);
+    expect(isIsoDate(null)).toBe(false);
+  });
+
+  it("tells the current time in the business time zone", () => {
+    const now = new Date("2026-10-25T09:15:00Z"); // primer día del horario de invierno en Madrid
+    expect(minutesNowIn("Europe/Madrid", now)).toBe(10 * 60 + 15);
+    expect(minutesNowIn("UTC", new Date("2026-11-23T00:05:00Z"))).toBe(5);
+  });
+
+  it("formats a week range compactly", () => {
+    expect(formatWeekRange("2026-11-23")).toBe("23 – 29 nov 2026");
+    expect(formatWeekRange("2026-11-30")).toBe("30 nov – 6 dic 2026");
+    expect(formatWeekRange("2026-12-28")).toBe("28 dic 2026 – 3 ene 2027");
   });
 });

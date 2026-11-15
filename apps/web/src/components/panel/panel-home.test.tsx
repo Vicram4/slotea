@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { agenda, appointment, business, emptyAgendaHandlers } from "@/test/agenda-fixtures";
 import { ana, corte, staffMe } from "@/test/catalog-fixtures";
 import { server } from "@/test/msw";
 import { ownerMe, renderWithQuery } from "@/test/render";
@@ -20,6 +21,7 @@ describe("PanelHome", () => {
   it("shows who I am and what is left to set up", async () => {
     server.use(
       http.get("/api/v1/me", () => HttpResponse.json(ownerMe)),
+      ...emptyAgendaHandlers(),
       http.get("/api/v1/services", () => HttpResponse.json([corte])),
       http.get("/api/v1/staff", () => HttpResponse.json([])),
     );
@@ -41,6 +43,7 @@ describe("PanelHome", () => {
     let body: unknown;
     server.use(
       http.get("/api/v1/me", () => HttpResponse.json(ownerMe)),
+      ...emptyAgendaHandlers(),
       http.get("/api/v1/services", () => HttpResponse.json([])),
       http.get("/api/v1/staff", () => HttpResponse.json([])),
       http.post("/api/v1/staff", async ({ request }) => {
@@ -59,6 +62,7 @@ describe("PanelHome", () => {
   it("does not offer setup actions to staff", async () => {
     server.use(
       http.get("/api/v1/me", () => HttpResponse.json(staffMe)),
+      ...emptyAgendaHandlers(),
       http.get("/api/v1/services", () => HttpResponse.json([corte])),
       http.get("/api/v1/staff", () => HttpResponse.json([ana])),
     );
@@ -67,5 +71,28 @@ describe("PanelHome", () => {
 
     expect(await screen.findByText("Configura tu negocio")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Añádete como profesional" })).not.toBeInTheDocument();
+  });
+
+  it("shows today's appointments, without the cancelled ones", async () => {
+    let query: URLSearchParams | undefined;
+    server.use(
+      http.get("/api/v1/me", () => HttpResponse.json(ownerMe)),
+      http.get("/api/v1/business", () => HttpResponse.json(business)),
+      http.get("/api/v1/appointments", ({ request }) => {
+        query = new URL(request.url).searchParams;
+        return HttpResponse.json(
+          agenda({ appointments: [appointment(), appointment({ id: "e9", status: "CANCELLED" })] }),
+        );
+      }),
+      http.get("/api/v1/services", () => HttpResponse.json([corte])),
+      http.get("/api/v1/staff", () => HttpResponse.json([ana])),
+    );
+
+    renderWithQuery(<PanelHome />);
+
+    expect(await screen.findByText("1 cita")).toBeInTheDocument();
+    expect(screen.getByText("Laura Pérez · Corte")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Abrir la agenda" })).toHaveAttribute("href", "/panel/agenda");
+    expect(query?.get("from")).toBe(query?.get("to"));
   });
 });

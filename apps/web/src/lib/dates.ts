@@ -26,6 +26,7 @@ function asUtc(date: IsoDate): Date {
 
 const weekday = new Intl.DateTimeFormat("es-ES", { weekday: "short", timeZone: "UTC" });
 const dayMonth = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", timeZone: "UTC" });
+const dayMonthYear = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const longDate = new Intl.DateTimeFormat("es-ES", {
   weekday: "long",
   day: "numeric",
@@ -53,4 +54,33 @@ export function isOtherTimeZone(timeZone: string): boolean {
   const hour = (tz: string) =>
     new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(now);
   return hour(own) !== hour(timeZone);
+}
+
+/** El lunes de la semana de esa fecha (en España la semana empieza en lunes). */
+export function startOfWeek(date: IsoDate): IsoDate {
+  const dayOfWeek = asUtc(date).getUTCDay(); // 0 = domingo
+  return addDays(date, -((dayOfWeek + 6) % 7));
+}
+
+/** ¿Es una fecha de calendario válida? Para lo que llega en la URL. */
+export function isIsoDate(value: string | null | undefined): value is IsoDate {
+  return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && asUtc(value).toISOString().startsWith(value);
+}
+
+/** Minutos desde las 00:00 de ahora mismo en esa zona horaria (la línea de «ahora» de la agenda). */
+export function minutesNowIn(timeZone: string, now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(now)
+    .reduce<Record<string, string>>((acc, part) => ({ ...acc, [part.type]: part.value }), {});
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
+/** «23 – 29 nov 2026» o, si cambia de mes o de año, «30 nov – 6 dic 2026». */
+export function formatWeekRange(monday: IsoDate): string {
+  const sunday = addDays(monday, 6);
+  const sameYear = monday.slice(0, 4) === sunday.slice(0, 4);
+  const sameMonth = sameYear && monday.slice(5, 7) === sunday.slice(5, 7);
+  const end = dayMonthYear.format(asUtc(sunday));
+  if (sameMonth) return `${asUtc(monday).getUTCDate()} – ${end}`;
+  return `${(sameYear ? dayMonth : dayMonthYear).format(asUtc(monday))} – ${end}`;
 }

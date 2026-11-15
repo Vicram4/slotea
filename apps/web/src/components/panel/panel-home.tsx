@@ -8,7 +8,9 @@ import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAgenda, useBusiness } from "@/lib/agenda";
 import { useCanEdit, useSaveStaff, useServices, useStaff } from "@/lib/catalog";
+import { todayIn } from "@/lib/dates";
 import { roleLabels, useMe } from "@/lib/session";
 
 /** Inicio del panel: quién soy y qué falta para que el negocio pueda recibir reservas. */
@@ -37,8 +39,54 @@ export function PanelHome() {
           </dl>
         </CardContent>
       </Card>
+      <TodayCard />
       <SetupChecklist userId={user.id} fullName={user.fullName} />
     </>
+  );
+}
+
+/** Las citas de hoy de un vistazo (para el empleado, solo las suyas: lo decide la API). */
+function TodayCard() {
+  const business = useBusiness();
+  const today = business.data ? todayIn(business.data.timezone) : "";
+  const agenda = useAgenda({ from: today, to: today }, !!business.data);
+  const active = agenda.data?.appointments.filter((a) => a.status !== "CANCELLED") ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Hoy</CardTitle>
+        <CardDescription>
+          {agenda.isSuccess
+            ? active.length === 0
+              ? "No hay citas para hoy."
+              : `${active.length} ${active.length === 1 ? "cita" : "citas"}`
+            : agenda.isError || business.isError
+              ? "No se pudieron cargar las citas de hoy."
+              : "Cargando…"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        {active.length > 0 && (
+          <ul className="grid gap-1 text-sm">
+            {active.map((a) => (
+              <li key={a.id} className="flex gap-3">
+                <span className="w-12 font-medium tabular-nums">{a.startTime}</span>
+                <span>
+                  {a.customer.fullName} · {a.serviceName}
+                  {agenda.data && agenda.data.staff.length > 1 && (
+                    <span className="text-muted-foreground"> · {a.staffName}</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link href="/panel/agenda" className="text-sm font-medium underline-offset-4 hover:underline">
+          Abrir la agenda
+        </Link>
+      </CardContent>
+    </Card>
   );
 }
 

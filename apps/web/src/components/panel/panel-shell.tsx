@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 export const PANEL_LINKS = [
   { href: "/panel", label: "Inicio" },
+  { href: "/panel/agenda", label: "Agenda" },
   { href: "/panel/servicios", label: "Servicios" },
   { href: "/panel/profesionales", label: "Profesionales" },
   { href: "/panel/cierres", label: "Cierres" },
