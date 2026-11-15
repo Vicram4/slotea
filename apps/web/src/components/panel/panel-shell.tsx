@@ -1,5 +1,17 @@
 "use client";
 
+import {
+  CalendarDays,
+  CalendarOff,
+  ExternalLink,
+  House,
+  Inbox,
+  LogOut,
+  Settings,
+  Tags,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, type ReactNode } from "react";
@@ -7,24 +19,26 @@ import { Suspense, useEffect, type ReactNode } from "react";
 import { DemoBar } from "@/components/demo/demo-bar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useBusiness } from "@/lib/agenda";
+import { useBrandColor } from "@/lib/brand";
 import { roleLabels, useLogout, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-export const PANEL_LINKS = [
-  { href: "/panel", label: "Inicio" },
-  { href: "/panel/agenda", label: "Agenda" },
-  { href: "/panel/servicios", label: "Servicios" },
-  { href: "/panel/profesionales", label: "Profesionales" },
-  { href: "/panel/cierres", label: "Cierres" },
-] as const;
+type NavLink = { href: string; label: string; icon: LucideIcon };
+
+export const PANEL_LINKS: readonly NavLink[] = [
+  { href: "/panel", label: "Inicio", icon: House },
+  { href: "/panel/agenda", label: "Agenda", icon: CalendarDays },
+  { href: "/panel/servicios", label: "Servicios", icon: Tags },
+  { href: "/panel/profesionales", label: "Profesionales", icon: Users },
+  { href: "/panel/cierres", label: "Cierres", icon: CalendarOff },
+];
 
 /** Solo para el dueño: el empleado no puede cambiar los datos del negocio (la API da 403). */
-export const SETTINGS_LINK = { href: "/panel/ajustes", label: "Ajustes" } as const;
+export const SETTINGS_LINK: NavLink = { href: "/panel/ajustes", label: "Ajustes", icon: Settings };
 
 /** Solo en una copia de la demo y para el dueño (los emails van al negocio y a los clientes). */
-export const DEMO_INBOX_LINK = { href: "/panel/bandeja", label: "Bandeja de la demo" } as const;
-
-type NavLink = { href: string; label: string };
+export const DEMO_INBOX_LINK: NavLink = { href: "/panel/bandeja", label: "Bandeja de la demo", icon: Inbox };
 
 function isCurrent(pathname: string | null, href: string): boolean {
   if (pathname === null) return false;
@@ -34,17 +48,23 @@ function isCurrent(pathname: string | null, href: string): boolean {
 function NavLinks({ pathname, links }: { pathname: string | null; links: readonly NavLink[] }) {
   return (
     <nav aria-label="Panel">
-      <ul className="flex flex-wrap gap-1 md:flex-col">
-        {links.map((link) => {
-          const current = isCurrent(pathname, link.href);
+      <ul className="flex flex-wrap gap-0.5 md:flex-col">
+        {links.map(({ href, label, icon: Icon }) => {
+          const current = isCurrent(pathname, href);
           return (
-            <li key={link.href}>
+            <li key={href}>
               <Link
-                href={link.href}
+                href={href}
                 aria-current={current ? "page" : undefined}
-                className={cn("hover:bg-accent block rounded-md px-3 py-2 text-sm", current && "bg-accent font-medium")}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                  current
+                    ? "bg-background text-foreground font-medium shadow-xs ring-1 ring-black/5"
+                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                )}
               >
-                {link.label}
+                <Icon className="size-4 shrink-0" aria-hidden />
+                {label}
               </Link>
             </li>
           );
@@ -86,7 +106,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
   if (me.isPending || me.data === null) {
     return (
-      <p role="status" className="p-12 text-center">
+      <p role="status" className="text-muted-foreground p-12 text-center text-sm">
         Cargando tu panel…
       </p>
     );
@@ -113,24 +133,58 @@ export function PanelShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[14rem_1fr] md:grid-rows-[auto_1fr]">
+    <div className="min-h-dvh md:grid md:grid-cols-[15rem_1fr] md:grid-rows-[auto_1fr]">
       <DemoBar me={me.data} />
-      <aside className="bg-muted/40 flex flex-col gap-6 border-b p-4 md:border-r md:border-b-0">
-        <div className="grid gap-1">
-          <span className="text-lg font-semibold">{activeBusiness?.name ?? "Slotea"}</span>
-          <span className="text-muted-foreground text-sm">
-            {user.fullName}
-            {activeBusiness && ` · ${roleLabels[activeBusiness.role]}`}
-          </span>
+      <aside className="bg-muted/50 flex flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0">
+        <div className="flex items-center gap-3 px-1">
+          {activeBusiness && <BrandMark name={activeBusiness.name} />}
+          <div className="grid min-w-0">
+            <span className="truncate text-sm font-semibold">{activeBusiness?.name ?? "Slotea"}</span>
+            {activeBusiness && (
+              <span className="text-muted-foreground text-xs">{roleLabels[activeBusiness.role]}</span>
+            )}
+          </div>
         </div>
         {activeBusiness && <PanelNav links={links} />}
-        <Button variant="outline" size="sm" className="md:mt-auto" onClick={onLogout} disabled={logout.isPending}>
-          {logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}
-        </Button>
+        <div className="grid gap-1 md:mt-auto">
+          {activeBusiness && (
+            <Link
+              href={`/${activeBusiness.slug}`}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm"
+            >
+              <ExternalLink className="size-4 shrink-0" aria-hidden />
+              Tu página de reservas
+            </Link>
+          )}
+          <div className="flex items-center justify-between gap-2 border-t pt-3 pl-2.5">
+            <span className="text-muted-foreground truncate text-xs">{user.fullName}</span>
+            <Button variant="ghost" size="sm" onClick={onLogout} disabled={logout.isPending}>
+              <LogOut aria-hidden />
+              {logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}
+            </Button>
+          </div>
+        </div>
       </aside>
-      <main className="mx-auto grid w-full max-w-4xl content-start gap-6 p-6 md:p-10">
+      <main className="mx-auto grid w-full max-w-6xl content-start gap-6 p-6 md:p-10">
         {activeBusiness ? children : <p>Tu cuenta todavía no pertenece a ningún negocio.</p>}
       </main>
     </div>
+  );
+}
+
+/**
+ * La inicial del negocio en su color, como en la página pública. Pide los datos del negocio (que la
+ * agenda también usa: van a la misma caché) y pinta todo el panel con su color de marca.
+ */
+function BrandMark({ name }: { name: string }) {
+  const business = useBusiness();
+  useBrandColor(business.data?.brandColor);
+  return (
+    <span
+      aria-hidden
+      className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-md text-sm font-semibold"
+    >
+      {name.trim().charAt(0).toUpperCase()}
+    </span>
   );
 }

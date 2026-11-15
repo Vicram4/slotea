@@ -3,7 +3,7 @@
 import { endMinutes, statusLabels, toMinutes, type AgendaAppointment } from "@/lib/agenda";
 import { cn } from "@/lib/utils";
 
-import { isPendingOutcome, statusStyles } from "./appointment-status";
+import { isPendingOutcome, pendingOutcomeStyle, statusStyles } from "./appointment-status";
 
 /** Alto de un minuto en la rejilla: una cita de 30 min mide 42 px (dos líneas de texto). */
 const PX_PER_MINUTE = 1.4;
@@ -15,9 +15,11 @@ export type GridColumn = {
   key: string;
   title: string;
   subtitle?: string;
+  /** Vista de día: la inicial del profesional, en un círculo junto a su nombre. */
+  initial?: string;
   /** Hoy: la cabecera se resalta. */
   today?: boolean;
-  /** Minutos de «ahora», para la línea roja (solo en la columna de hoy). */
+  /** Minutos de «ahora», para la línea de la hora actual (solo en la columna de hoy). */
   nowMinutes?: number;
   appointments: AgendaAppointment[];
 };
@@ -73,47 +75,73 @@ export function TimeGrid({
   const template = { gridTemplateColumns: `3.5rem repeat(${columns.length}, minmax(9rem, 1fr))` };
 
   return (
-    <section aria-label={label} className="overflow-x-auto rounded-lg border">
+    <section aria-label={label} className="bg-background overflow-x-auto rounded-xl border shadow-xs">
       <div className="grid min-w-fit" style={template}>
-        <div className="border-b" />
+        <div className="bg-background sticky left-0 z-20 border-b" />
         {columns.map((column) => (
-          <div
-            key={column.key}
-            className={cn("border-b border-l px-2 py-2 text-center text-sm", column.today && "bg-accent")}
-          >
-            <div className="font-medium">{column.title}</div>
-            {column.subtitle && <div className="text-muted-foreground text-xs">{column.subtitle}</div>}
+          <div key={column.key} className="flex items-center justify-center gap-2 border-b border-l px-2 py-3 text-sm">
+            {column.initial !== undefined ? (
+              <>
+                <span
+                  aria-hidden
+                  className="bg-muted text-muted-foreground grid size-6 shrink-0 place-items-center rounded-full text-xs font-medium"
+                >
+                  {column.initial}
+                </span>
+                <span className="truncate font-medium">{column.title}</span>
+                {column.subtitle && <span className="text-muted-foreground text-xs">· {column.subtitle}</span>}
+              </>
+            ) : (
+              <span className="grid justify-items-center gap-0.5">
+                <span className="text-muted-foreground text-xs uppercase">{column.title}</span>
+                {column.subtitle && (
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-sm font-medium tabular-nums",
+                      column.today && "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    {column.subtitle}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         ))}
 
-        <div className="relative" style={{ height }} aria-hidden>
-          {hours.map((minute) => (
+        <div className="bg-background sticky left-0 z-20" style={{ height }} aria-hidden>
+          {hours.slice(0, -1).map((minute) => (
             <span
               key={minute}
-              className="text-muted-foreground absolute right-2 -translate-y-1/2 text-xs tabular-nums"
-              style={{ top: (minute - start) * PX_PER_MINUTE }}
+              className="text-muted-foreground absolute right-2 text-[0.7rem] tabular-nums"
+              style={{ top: (minute - start) * PX_PER_MINUTE + 2 }}
             >
-              {minute < end ? hhmm(minute) : ""}
+              {hhmm(minute)}
             </span>
           ))}
         </div>
         {columns.map((column) => (
-          <div key={column.key} className="relative border-l" style={{ height }}>
-            {hours.slice(1, -1).map((minute) => (
-              <div
-                key={minute}
-                aria-hidden
-                className="border-muted absolute inset-x-0 border-t"
-                style={{ top: (minute - start) * PX_PER_MINUTE }}
-              />
+          <div key={column.key} className={cn("relative border-l", column.today && "bg-primary/[0.02]")} style={{ height }}>
+            {hours.slice(0, -1).map((minute) => (
+              <div key={minute} aria-hidden>
+                {minute > start && (
+                  <div className="absolute inset-x-0 border-t" style={{ top: (minute - start) * PX_PER_MINUTE }} />
+                )}
+                <div
+                  className="border-border/60 absolute inset-x-0 border-t border-dashed"
+                  style={{ top: (minute + 30 - start) * PX_PER_MINUTE }}
+                />
+              </div>
             ))}
             {column.nowMinutes !== undefined && column.nowMinutes >= start && column.nowMinutes <= end && (
               <div
                 aria-hidden
                 data-testid="now-line"
-                className="absolute inset-x-0 z-10 border-t-2 border-red-500"
+                className="border-primary absolute inset-x-0 z-10 border-t-2"
                 style={{ top: (column.nowMinutes - start) * PX_PER_MINUTE }}
-              />
+              >
+                <span className="bg-primary absolute -top-[5px] -left-1 size-2 rounded-full" />
+              </div>
             )}
             {lanes(column.appointments).map(({ appointment, lane, of }) => {
               const from = toMinutes(appointment.startTime);
@@ -125,20 +153,23 @@ export function TimeGrid({
                   onClick={() => onSelect(appointment)}
                   aria-label={`${appointment.startTime}–${appointment.endTime}, ${appointment.customer.fullName}, ${appointment.serviceName}, ${statusLabels[appointment.status]}`}
                   className={cn(
-                    "focus-visible:ring-ring absolute overflow-hidden rounded-md border px-2 py-1 text-left text-xs leading-tight shadow-xs hover:brightness-95 focus-visible:ring-2 focus-visible:outline-none",
+                    "focus-visible:ring-ring/50 absolute z-[5] flex flex-col justify-start overflow-hidden rounded-md border-l-[3px] px-2 py-0.5 text-left text-xs leading-tight transition-[filter] hover:brightness-[0.97] focus-visible:ring-[3px] focus-visible:outline-none",
                     statusStyles[appointment.status],
-                    isPendingOutcome(appointment) && "border-2 border-dashed",
+                    isPendingOutcome(appointment) && pendingOutcomeStyle,
                   )}
                   style={{
                     top: (from - start) * PX_PER_MINUTE + 1,
                     height: Math.max((to - from) * PX_PER_MINUTE - 2, 18),
-                    left: `calc(${(lane / of) * 100}% + 2px)`,
-                    width: `calc(${100 / of}% - 4px)`,
+                    left: `calc(${(lane / of) * 100}% + 3px)`,
+                    width: `calc(${100 / of}% - 6px)`,
                   }}
                 >
-                  <span className="font-semibold tabular-nums">{appointment.startTime}</span>{" "}
-                  <span className="font-medium">{appointment.customer.fullName}</span>
-                  <span className="block truncate opacity-80">{appointment.serviceName}</span>
+                  <span className="block truncate">
+                    <span className="opacity-70 tabular-nums">{appointment.startTime}</span>{" "}
+                    <span className="font-medium">{appointment.customer.fullName}</span>
+                  </span>
+                  {/* Una cita de menos de 30 min no tiene sitio para el servicio (sigue en el aria-label). */}
+                  {to - from >= 30 && <span className="block truncate opacity-70">{appointment.serviceName}</span>}
                 </button>
               );
             })}

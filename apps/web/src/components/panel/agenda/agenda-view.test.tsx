@@ -67,7 +67,7 @@ describe("AgendaView", () => {
     expect(onNavigate).toHaveBeenLastCalledWith({ date: "2026-11-24", view: "day" });
     await userEvent.click(screen.getByRole("button", { name: "Semana" }));
     expect(onNavigate).toHaveBeenLastCalledWith({ date: "2026-11-23", view: "week" });
-    await userEvent.selectOptions(screen.getByLabelText("Profesional"), "Bruno");
+    await userEvent.click(within(screen.getByRole("radiogroup", { name: "Profesional" })).getByRole("radio", { name: "Bruno" }));
     expect(onNavigate).toHaveBeenLastCalledWith({ date: "2026-11-23", view: "day", staffId: bruno.id });
   });
 

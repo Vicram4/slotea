@@ -27,7 +27,7 @@ export function DemoBar({ me }: { me: Me }) {
     <div
       role="region"
       aria-label="Demo"
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950 md:col-span-2"
+      className="bg-foreground text-background flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-sm md:col-span-2 [&_[data-slot=button]]:border-white/20 [&_[data-slot=button]]:bg-transparent [&_[data-slot=button]]:text-inherit [&_[data-slot=button]:hover]:bg-white/10"
     >
       <p className="flex items-center gap-2">
         <FlaskConical className="size-4 shrink-0" aria-hidden />
@@ -51,7 +51,7 @@ export function DemoBar({ me }: { me: Me }) {
         )}
       </div>
       {switchRole.isError && (
-        <p role="alert" className="text-destructive w-full">
+        <p role="alert" className="w-full text-red-300">
           No se pudo cambiar de usuario. Si la demo ha caducado, vuelve a la portada y crea otra.
         </p>
       )}

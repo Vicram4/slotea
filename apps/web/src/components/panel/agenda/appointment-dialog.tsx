@@ -23,7 +23,7 @@ import { ApiError } from "@/lib/api/client";
 import { formatLongDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-import { statusStyles } from "./appointment-status";
+import { statusBadgeStyles } from "./appointment-status";
 
 /** «15 nov, 12:03» en la zona del negocio. */
 function formatInstant(iso: string, timeZone: string): string {
@@ -106,7 +106,7 @@ function Details({
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Estado</dt>
         <dd>
-          <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", statusStyles[a.status])}>
+          <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", statusBadgeStyles[a.status])}>
             {statusLabels[a.status]}
           </span>
         </dd>

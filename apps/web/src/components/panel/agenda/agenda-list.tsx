@@ -4,7 +4,7 @@ import { statusLabels, type AgendaAppointment } from "@/lib/agenda";
 import { formatLongDate, type IsoDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-import { isPendingOutcome, statusStyles } from "./appointment-status";
+import { isPendingOutcome, pendingOutcomeStyle, statusStyles } from "./appointment-status";
 
 /**
  * La agenda como lista, agrupada por días: en el móvil, donde no cabe la rejilla. Mismos datos y
@@ -22,14 +22,17 @@ export function AgendaList({
   onSelect: (appointment: AgendaAppointment) => void;
 }) {
   return (
-    <section aria-label="Lista de citas" className="grid gap-4">
+    <section aria-label="Lista de citas" className="grid gap-6">
       {days.map((day) => {
         const ofDay = appointments.filter((a) => a.date === day);
         return (
           <div key={day} className="grid gap-2">
-            {days.length > 1 && <h3 className="text-sm font-medium first-letter:uppercase">{formatLongDate(day)}</h3>}
+            {days.length > 1 && (
+              <h3 className="text-muted-foreground text-xs font-medium uppercase">{formatLongDate(day)}</h3>
+            )}
             {ofDay.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Sin citas.</p>
+              // Con un solo día, el resumen de arriba ya dice que no hay citas.
+              days.length > 1 && <p className="text-muted-foreground text-sm">Nada este día.</p>
             ) : (
               <ul className="grid gap-2">
                 {ofDay.map((a) => (
@@ -38,15 +41,15 @@ export function AgendaList({
                       type="button"
                       onClick={() => onSelect(a)}
                       className={cn(
-                        "grid w-full grid-cols-[3.5rem_1fr] gap-x-3 rounded-md border p-3 text-left text-sm",
+                        "grid w-full grid-cols-[3.25rem_1fr] gap-x-3 rounded-md border-l-[3px] px-3 py-2.5 text-left text-sm",
                         statusStyles[a.status],
-                        isPendingOutcome(a) && "border-2 border-dashed",
+                        isPendingOutcome(a) && pendingOutcomeStyle,
                       )}
                     >
-                      <span className="font-semibold tabular-nums">{a.startTime}</span>
+                      <span className="font-medium tabular-nums">{a.startTime}</span>
                       <span className="font-medium">{a.customer.fullName}</span>
-                      <span className="text-xs tabular-nums opacity-70">{a.endTime}</span>
-                      <span className="text-xs opacity-80">
+                      <span className="text-xs tabular-nums opacity-60">{a.endTime}</span>
+                      <span className="text-xs opacity-70">
                         {a.serviceName}
                         {showStaff && ` · ${a.staffName}`} · {statusLabels[a.status]}
                       </span>

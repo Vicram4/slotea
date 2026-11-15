@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { business } from "@/test/agenda-fixtures";
 import { server } from "@/test/msw";
 import { ownerMe, renderWithQuery } from "@/test/render";
 
@@ -16,6 +17,7 @@ describe("PanelShell", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=t; path=/";
     pathname = "/panel/servicios";
+    server.use(http.get("/api/v1/business", () => HttpResponse.json({ ...business, brandColor: "#be185d" })));
   });
 
   it("shows the business, the navigation and the page once the session is loaded", async () => {
@@ -31,6 +33,9 @@ describe("PanelShell", () => {
     expect(screen.getByText("Barbería Demo")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Servicios" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Inicio" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Tu página de reservas" })).toHaveAttribute("href", "/barberia-demo");
+    // El panel lleva el color del negocio.
+    await vi.waitFor(() => expect(document.documentElement.style.getPropertyValue("--primary")).toBe("#be185d"));
   });
 
   it("goes to the login page when there is no session", async () => {

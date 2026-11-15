@@ -8,12 +8,8 @@ export const metadata: Metadata = { title: "Agenda · Slotea" };
 export default function Page() {
   return (
     <>
-      <header>
-        <h1 className="text-2xl font-semibold">Agenda</h1>
-        <p className="text-muted-foreground text-sm">
-          Las citas del día o de la semana. Pulsa una cita para ver sus datos, marcar cómo fue o cancelarla.
-        </p>
-      </header>
+      {/* El título visible es la fecha (lo pinta la agenda). */}
+      <h1 className="sr-only">Agenda</h1>
       {/* useSearchParams: se resuelve en el navegador (ver AgendaRoute). */}
       <Suspense fallback={<p role="status">Cargando la agenda…</p>}>
         <AgendaRoute />
