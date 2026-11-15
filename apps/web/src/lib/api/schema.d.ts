@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /** Citas que empiezan entre dos fechas (incluidas, máx. 42 días, en la zona del negocio). Un empleado solo recibe las suyas */
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         post?: never;
         delete?: never;
@@ -29,7 +29,7 @@ export interface paths {
             cookie?: never;
         };
         /** Una cita (404 si es de otro profesional y quien pregunta es un empleado) */
-        get: operations["get_4"];
+        get: operations["get_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -239,6 +239,74 @@ export interface paths {
         post?: never;
         /** Borrar un cierre. Un empleado solo puede borrar sus propias ausencias */
         delete: operations["deleteClosure"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bandeja de la demo: los últimos emails de esta copia (nunca se envían) */
+        get: operations["list_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/inbox/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Un email de la bandeja de la demo, renderizado (HTML y texto) */
+        get: operations["get_4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crear una copia de la demo y entrar en ella */
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cambiar de dueño a empleado (o al revés) en la misma copia de la demo */
+        post: operations["switchRole"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -632,6 +700,38 @@ export interface components {
             date: string;
             slots: components["schemas"]["SlotResponse"][];
         };
+        DemoSessionRequest: {
+            /** @enum {string} */
+            role: "OWNER" | "STAFF";
+        };
+        InboxEmail: {
+            /** Format: uuid */
+            appointmentId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            subject: string;
+            to: string;
+            toBusiness: boolean;
+            /** @enum {string} */
+            type: "BOOKING_CONFIRMED" | "BOOKING_RESCHEDULED" | "BOOKING_CANCELLED" | "BUSINESS_NEW_BOOKING" | "BUSINESS_BOOKING_RESCHEDULED" | "BUSINESS_BOOKING_CANCELLED";
+        };
+        InboxEmailDetail: {
+            /** Format: uuid */
+            appointmentId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            html: string;
+            /** Format: uuid */
+            id: string;
+            subject: string;
+            text: string;
+            to: string;
+            toBusiness: boolean;
+            /** @enum {string} */
+            type: "BOOKING_CONFIRMED" | "BOOKING_RESCHEDULED" | "BOOKING_CANCELLED" | "BUSINESS_NEW_BOOKING" | "BUSINESS_BOOKING_RESCHEDULED" | "BUSINESS_BOOKING_CANCELLED";
+        };
         LoginRequest: {
             /** Format: email */
             email: string;
@@ -682,6 +782,7 @@ export interface components {
         MembershipSummary: {
             /** Format: uuid */
             businessId: string;
+            demo: boolean;
             name: string;
             /** @enum {string} */
             role: "OWNER" | "STAFF";
@@ -694,6 +795,7 @@ export interface components {
             time: string;
         };
         PublicBusinessResponse: {
+            demo: boolean;
             name: string;
             services: components["schemas"]["PublicService"][];
             slug: string;
@@ -823,7 +925,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_2: {
+    list_3: {
         parameters: {
             query: {
                 from: string;
@@ -847,7 +949,7 @@ export interface operations {
             };
         };
     };
-    get_4: {
+    get_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1172,6 +1274,96 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxEmail"][];
+                };
+            };
+        };
+    };
+    get_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxEmailDetail"];
+                };
+            };
+        };
+    };
+    create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+        };
+    };
+    switchRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
             };
         };
     };
