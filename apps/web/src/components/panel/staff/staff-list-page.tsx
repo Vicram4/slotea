@@ -10,8 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCanEdit, useServices, useStaff } from "@/lib/catalog";
+import { cn } from "@/lib/utils";
 
+import { PageHeader } from "../page-header";
 import { StaffForm } from "./staff-form";
+import { StaffInitial } from "./staff-initial";
 
 /** Equipo del negocio. Cada profesional abre su ficha (datos, servicios, horario y ausencias). */
 export function StaffListPage() {
@@ -23,19 +26,26 @@ export function StaffListPage() {
 
   const serviceName = new Map(services.data?.map((s) => [s.id, s.name]));
 
+  const list = staff.data ?? [];
+  const inactive = list.filter((m) => !m.active).length;
+
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Profesionales</h1>
-          <p className="text-muted-foreground text-sm">Quién atiende, qué hace y cuándo trabaja.</p>
-        </div>
-        {canEdit && (
-          <Button onClick={() => setCreating(true)}>
-            <Plus aria-hidden /> Nuevo profesional
-          </Button>
-        )}
-      </header>
+      <PageHeader
+        title="Profesionales"
+        description={
+          list.length > 0
+            ? `${list.length} en el equipo${inactive > 0 ? ` (${inactive} sin aceptar reservas)` : ""}. Abre una ficha para elegir qué hace cada uno y cuándo trabaja.`
+            : "Quién atiende, qué hace y cuándo trabaja."
+        }
+        actions={
+          canEdit && (
+            <Button onClick={() => setCreating(true)}>
+              <Plus aria-hidden /> Nuevo profesional
+            </Button>
+          )
+        }
+      />
 
       {staff.isPending && <p role="status">Cargando profesionales…</p>}
       {staff.isError && (
@@ -43,27 +53,39 @@ export function StaffListPage() {
           <AlertDescription>No se pudieron cargar los profesionales. Recarga la página.</AlertDescription>
         </Alert>
       )}
-      {staff.data?.length === 0 && <p className="text-muted-foreground">Todavía no hay profesionales.</p>}
-      {staff.data && staff.data.length > 0 && (
+      {staff.data?.length === 0 && (
+        <div className="text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
+          Todavía no hay profesionales.{canEdit && " Añade al primero con «Nuevo profesional»."}
+        </div>
+      )}
+      {list.length > 0 && (
         <ul className="divide-y rounded-lg border">
-          {staff.data.map((member) => (
+          {list.map((member) => (
             <li key={member.id}>
               <Link
                 href={`/panel/profesionales/${member.id}`}
-                className="hover:bg-accent flex items-center gap-4 p-4"
+                className="hover:bg-muted/50 flex items-center gap-4 px-4 py-3 first:rounded-t-lg"
               >
-                <div className="grid flex-1 gap-1">
+                <StaffInitial name={member.displayName} muted={!member.active} />
+                <div className="grid min-w-0 flex-1 gap-0.5">
                   <span className="flex items-center gap-2 font-medium">
-                    {member.displayName}
-                    {!member.active && <Badge variant="secondary">Desactivado</Badge>}
+                    <span className={cn(!member.active && "text-muted-foreground")}>{member.displayName}</span>
+                    {!member.active && (
+                      <Badge variant="outline" className="font-normal">
+                        No acepta reservas
+                      </Badge>
+                    )}
                   </span>
-                  <span className="text-muted-foreground text-sm">
+                  <span className="text-muted-foreground truncate text-sm">
                     {member.serviceIds.length === 0
-                      ? "Sin servicios asignados"
+                      ? "Sin servicios: todavía no se le puede reservar"
                       : member.serviceIds.map((id) => serviceName.get(id) ?? "…").join(", ")}
                   </span>
                 </div>
-                <ChevronRight className="text-muted-foreground size-4" aria-hidden />
+                {member.userId && (
+                  <span className="text-muted-foreground hidden text-xs sm:inline">Entra en el panel</span>
+                )}
+                <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden />
               </Link>
             </li>
           ))}

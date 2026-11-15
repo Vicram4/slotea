@@ -23,12 +23,15 @@ describe("ServicesPage", () => {
     renderWithQuery(<ServicesPage />);
 
     const row = await screen.findByRole("row", { name: /^Corte/ });
-    expect(within(row).getByText("30 min")).toBeInTheDocument();
+    expect(row).toHaveTextContent("30 min + 5 min de margen");
     expect(within(row).getByText("15,00 €")).toBeInTheDocument();
-    expect(within(row).getByText("Activo")).toBeInTheDocument();
+    expect(within(row).queryByText("Desactivado")).not.toBeInTheDocument();
     const inactive = screen.getByRole("row", { name: /^Tinte/ });
-    expect(within(inactive).getByText("1 h 30 min")).toBeInTheDocument();
+    expect(inactive).toHaveTextContent("1 h 30 min");
+    expect(inactive).not.toHaveTextContent("margen");
     expect(within(inactive).getByText("Desactivado")).toBeInTheDocument();
+    // El resumen de la cabecera sale de los datos.
+    expect(screen.getByText(/2 servicios, de 30 min a 1 h 30 min · 1 desactivado/)).toBeInTheDocument();
   });
 
   it("creates a service from the dialog", async () => {
