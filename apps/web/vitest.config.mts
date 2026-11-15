@@ -6,6 +6,8 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     environment: "jsdom",
+    // Los `*.spec.ts` de e2e/ son de Playwright.
+    include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["./vitest.setup.ts"],
     restoreMocks: true,
     // Zona horaria fija: el runner de CI está en UTC y sin esto los tests dependerían del equipo.

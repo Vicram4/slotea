@@ -36,6 +36,7 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Rutas públicas: el tenant lo fija `PublicTenantFilter` a partir del slug (`/api/v1/public/businesses/{slug}/**`). No recibas un `businessId` del cliente.
 - Next 16 + `cacheComponents`: en rutas con parámetros sin `generateStaticParams`, `await params` va dentro de un `Suspense` (ver `app/[slug]/page.tsx`).
 - Next 16 + `cacheComponents`: `usePathname()` en un componente cliente bloquea el prerender de rutas con parámetros → envuélvelo en `Suspense` (ver `PanelShell`). `useSearchParams()` igual, en cualquier ruta (ver `AgendaRoute`).
+- Next 16 + `cacheComponents`: al navegar, la página anterior queda **oculta en el DOM** (`<Activity>`). En Playwright, busca campos con `field()` de `e2e/helpers.ts` (solo visibles) o por rol.
 - Vitest/jsdom: Radix necesita `ResizeObserver` (stub en `vitest.setup.ts`). Para nombres accesibles de botones con icono, usa `aria-label`, no `<span class="sr-only">`.
 - MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
 - Emails: se encolan en `email_outbox` **dentro** de la transacción del cambio y se envían con `EmailOutbox.sendNow` **después** del commit (nunca en `AFTER_COMMIT` ni en segundo plano: ver `docs/fase-7-emails.md`). No reactives el health de mail.
@@ -73,6 +74,7 @@ Requisitos: JDK 25, Node 26 (`.node-version`, con fnm), pnpm, Docker. Primera ve
 - Servicios locales (PostgreSQL + Mailpit): `docker compose up -d` (raíz). Mailpit: http://localhost:8025
 - API: `cd apps/api` → `./mvnw spring-boot:run` (arranca) · `./mvnw verify` (tests, necesita Docker)
 - Web: `cd apps/web` → `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build`
+- E2E (Playwright, `apps/web/e2e`): con la BD, la API y `pnpm dev` arrancados → `pnpm e2e`. Cada test crea su copia de la demo: en local el límite es de 20 copias por hora y por IP (en la CI va sin límite).
 - Contrato tras cambiar la API: `./mvnw test -Dtest=OpenApiContractTests -Dopenapi.update=true` (en `apps/api`) y luego `pnpm api:types` (en `apps/web`).
 - Mailpit (emails en local): http://localhost:8025 · Jobs: `POST /internal/jobs/{outbox,demo-cleanup,mail-heartbeat}` con la cabecera `X-Jobs-Token`.
 - Swagger UI (local): `http://localhost:<PORT>/swagger-ui.html` · OpenAPI: `/v3/api-docs`

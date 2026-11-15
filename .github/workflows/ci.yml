@@ -57,3 +57,80 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: slotea
+          POSTGRES_USER: slotea
+          POSTGRES_PASSWORD: slotea
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U slotea" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/slotea
+      DB_USER: slotea
+      DB_PASSWORD: slotea
+      PORT: "8080"
+      API_URL: http://localhost:8080
+      APP_WEB_URL: http://localhost:3000
+      # Todas las peticiones salen de la misma IP: sin esto, el límite de copias de la demo cortaría los tests.
+      APP_RATELIMIT_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v7
+      # Claves de usar y tirar: solo viven en este runner.
+      - name: Generate throwaway secrets
+        run: |
+          echo "JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')" >> "$GITHUB_ENV"
+          echo "LINK_SECRET=$(openssl rand -base64 48 | tr -d '\n')" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Start the API
+        working-directory: apps/api
+        run: |
+          ./mvnw -B -q -DskipTests package
+          nohup java -jar target/api-0.0.1-SNAPSHOT.jar > api.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/actuator/health/readiness && exit 0
+            sleep 2
+          done
+          cat api.log
+          exit 1
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Build the web
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm exec playwright install --with-deps chromium
+      # playwright.config.ts arranca `pnpm start` (la build de producción) en la CI.
+      - name: Run the E2E tests
+        working-directory: apps/web
+        run: pnpm e2e
+
+      - name: Upload the report and the API log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+            apps/api/api.log
+          retention-days: 7
