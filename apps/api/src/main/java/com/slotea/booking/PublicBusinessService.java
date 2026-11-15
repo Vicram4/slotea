@@ -53,6 +53,7 @@ class PublicBusinessService {
         staff.forEach(s -> bookable.addAll(s.serviceIds()));
 
         return new PublicBusinessResponse(business.getSlug(), business.getName(), business.getTimezone(),
+                business.getBrandColor(),
                 services.stream()
                         .filter(s -> bookable.contains(s.getId()))
                         .map(s -> new PublicService(s.getId(), s.getName(), s.getDescription(), s.getDurationMin(),

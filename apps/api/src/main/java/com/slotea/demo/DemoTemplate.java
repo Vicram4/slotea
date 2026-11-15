@@ -6,10 +6,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
+
+import com.slotea.shared.validation.BrandColor;
 
 /**
  * Qué hay en una copia de la demo de un sector: el negocio, su catálogo, sus profesionales (con su
@@ -21,6 +24,8 @@ import java.util.stream.IntStream;
 record DemoTemplate(
         String businessName,
         String contactEmail,
+        /** El color de marca de la copia: cada sector tiene el suyo. */
+        String brandColor,
         List<Service> services,
         List<Staff> staff,
         /** Nombres de los clientes; se apellidan «Ejemplo» o «Prueba» para que se vea que son inventados. */
@@ -73,10 +78,15 @@ record DemoTemplate(
         staff = List.copyOf(staff);
         customerFirstNames = List.copyOf(customerFirstNames);
         notes = List.copyOf(notes);
-        validate(businessName, services, staff, slotStepMin);
+        validate(businessName, brandColor, services, staff, slotStepMin);
     }
 
-    private static void validate(String businessName, List<Service> services, List<Staff> staff, int slotStepMin) {
+    private static void validate(String businessName, String brandColor, List<Service> services, List<Staff> staff,
+            int slotStepMin) {
+        // Lo mismo que exige la API (y en minúsculas, como lo guarda): la copia no se salta las reglas.
+        if (!BrandColor.Colors.isAcceptable(brandColor) || !brandColor.equals(brandColor.toLowerCase(Locale.ROOT))) {
+            throw new IllegalArgumentException(businessName + ": the brand color must be readable on white");
+        }
         if (staff.stream().filter(s -> s.account() == Account.OWNER).count() != 1) {
             throw new IllegalArgumentException(businessName + ": exactly one staff member must be the owner");
         }

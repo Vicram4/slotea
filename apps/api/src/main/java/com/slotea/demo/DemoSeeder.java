@@ -91,9 +91,9 @@ class DemoSeeder {
 
         UUID businessId = newId();
         jdbc.update("""
-                INSERT INTO business (id, slug, name, timezone, contact_email, is_demo, created_at)
-                VALUES (?, ?, ?, ?, ?, true, ?)""", businessId, slug, template.businessName(), TIMEZONE,
-                template.contactEmail(), created);
+                INSERT INTO business (id, slug, name, timezone, contact_email, brand_color, is_demo, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, true, ?)""", businessId, slug, template.businessName(), TIMEZONE,
+                template.contactEmail(), template.brandColor(), created);
 
         // Usuarios: un email único por copia (app_user.email es único en toda la plataforma).
         UUID ownerUserId = insertUser("dueno-" + suffix + "@example.com", template.owner().name(), created);

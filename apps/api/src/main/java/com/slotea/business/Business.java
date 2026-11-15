@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
+import com.slotea.shared.validation.BrandColor;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -30,6 +32,10 @@ public class Business {
 
     @Column(name = "contact_email", nullable = false)
     private String contactEmail;
+
+    /** {@code #rrggbb} en minúsculas; la validación de contraste es de {@code @BrandColor}. */
+    @Column(name = "brand_color", nullable = false)
+    private String brandColor = BrandColor.DEFAULT;
 
     @Column(name = "is_demo", nullable = false)
     private boolean demo;
@@ -68,6 +74,10 @@ public class Business {
         return contactEmail;
     }
 
+    public String getBrandColor() {
+        return brandColor;
+    }
+
     public boolean isDemo() {
         return demo;
     }
@@ -86,5 +96,9 @@ public class Business {
 
     public void changeContactEmail(String contactEmail) {
         this.contactEmail = contactEmail;
+    }
+
+    public void changeBrandColor(String brandColor) {
+        this.brandColor = brandColor;
     }
 }

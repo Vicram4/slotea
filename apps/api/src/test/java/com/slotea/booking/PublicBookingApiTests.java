@@ -91,6 +91,16 @@ class PublicBookingApiTests {
     }
 
     @Test
+    void businessPageCarriesTheBrandColor() {
+        assertThat(booking.business(tenant.slug())).bodyJson().extractingPath("$.brandColor").isEqualTo("#18181b");
+
+        catalog.send(tenant.owner(), "PATCH", "/api/v1/business", """
+                {"brandColor": "#0F766E"}""");
+
+        assertThat(booking.business(tenant.slug())).bodyJson().extractingPath("$.brandColor").isEqualTo("#0f766e");
+    }
+
+    @Test
     void unknownSlugIsNotFound() {
         assertThat(booking.business("no-existe")).hasStatus(HttpStatus.NOT_FOUND)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);

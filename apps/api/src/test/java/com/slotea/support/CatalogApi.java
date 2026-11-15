@@ -49,6 +49,7 @@ public final class CatalogApi {
             case "GET" -> mvc.get().uri(uri);
             case "POST" -> mvc.post().uri(uri);
             case "PUT" -> mvc.put().uri(uri);
+            case "PATCH" -> mvc.patch().uri(uri);
             case "DELETE" -> mvc.delete().uri(uri);
             default -> throw new IllegalArgumentException(method);
         };

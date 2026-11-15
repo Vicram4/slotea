@@ -58,6 +58,7 @@ final class DemoTemplates {
     static final DemoTemplate BARBERSHOP = new DemoTemplate(
             "Barbería Demo Slotea",
             "barberia-demo@example.com",
+            "#1e3a8a", // azul marino
             List.of(
                     new Service("Corte de pelo", "Lavado, corte y peinado.", 30, 0, 1500),
                     new Service("Arreglo de barba", "Perfilado con navaja y toalla caliente.", 20, 0, 1000),
@@ -82,6 +83,7 @@ final class DemoTemplates {
     static final DemoTemplate HAIR_AND_BEAUTY = new DemoTemplate(
             "Peluquería y Estética Demo",
             "peluqueria-demo@example.com",
+            "#be185d", // frambuesa
             List.of(
                     new Service("Corte de mujer", "Lavado, corte y secado.", 45, 0, 2200),
                     new Service("Corte de hombre", "Lavado y corte.", 30, 0, 1400),
@@ -113,6 +115,7 @@ final class DemoTemplates {
     static final DemoTemplate MECHANIC = new DemoTemplate(
             "Taller Demo Slotea",
             "taller-demo@example.com",
+            "#c2410c", // naranja óxido
             List.of(
                     new Service("Cambio de aceite y filtros", "Aceite, filtro de aceite y de aire.", 45, 15, 8900),
                     new Service("Revisión completa", "La revisión del fabricante, con sello en el libro.", 120, 0, 18000),
@@ -134,6 +137,7 @@ final class DemoTemplates {
     static final DemoTemplate PSYCHOLOGY = new DemoTemplate(
             "Psicología Demo Slotea",
             "psicologia-demo@example.com",
+            "#0f766e", // verde azulado
             List.of(
                     new Service("Primera consulta", "Una primera entrevista para ver qué necesitas.", 50, 10, 5000),
                     new Service("Sesión individual", "Terapia individual para adultos.", 50, 10, 6000),
@@ -150,6 +154,7 @@ final class DemoTemplates {
     static final DemoTemplate PHYSIOTHERAPY = new DemoTemplate(
             "Fisioterapia Demo Slotea",
             "fisioterapia-demo@example.com",
+            "#6d28d9", // violeta
             List.of(
                     new Service("Valoración inicial", "Exploración y plan de tratamiento.", 60, 0, 4500),
                     new Service("Sesión de fisioterapia", "Tratamiento manual y ejercicios.", 45, 0, 4000),
@@ -176,6 +181,7 @@ final class DemoTemplates {
     static final DemoTemplate VETERINARY = new DemoTemplate(
             "Clínica Veterinaria Demo",
             "veterinaria-demo@example.com",
+            "#15803d", // verde
             List.of(
                     new Service("Consulta general", "Exploración y diagnóstico.", 20, 10, 3500),
                     new Service("Vacunación", "Vacuna y actualización de la cartilla.", 15, 5, 3000),

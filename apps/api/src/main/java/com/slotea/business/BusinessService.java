@@ -45,6 +45,9 @@ class BusinessService {
         if (request.contactEmail() != null) {
             business.changeContactEmail(request.contactEmail().strip().toLowerCase(Locale.ROOT));
         }
+        if (request.brandColor() != null) {
+            business.changeBrandColor(request.brandColor().toLowerCase(Locale.ROOT));
+        }
         return BusinessResponse.from(business);
     }
 

@@ -5,6 +5,8 @@ import static com.slotea.support.SpaCsrf.spaCsrf;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -88,18 +90,19 @@ class TenantIsolationTests {
         assertThat(mvc.patch().uri("/api/v1/business").with(spaCsrf()).cookie(a.owner().access())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name": "Nuevo nombre A", "timezone": "Atlantic/Canary"}
+                        {"name": "Nuevo nombre A", "timezone": "Atlantic/Canary", "brandColor": "#1E3A8A"}
                         """))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .isLenientlyEqualTo("""
-                        {"name": "Nuevo nombre A", "timezone": "Atlantic/Canary", "slug": "%s"}
+                        {"name": "Nuevo nombre A", "timezone": "Atlantic/Canary", "brandColor": "#1e3a8a",
+                         "slug": "%s"}
                         """.formatted(a.slug()));
 
         assertThat(mvc.get().uri("/api/v1/business").cookie(b.owner().access()))
                 .bodyJson()
                 .isLenientlyEqualTo("""
-                        {"name": "Negocio b", "timezone": "Europe/Madrid"}
+                        {"name": "Negocio b", "timezone": "Europe/Madrid", "brandColor": "#18181b"}
                         """);
     }
 
@@ -117,12 +120,26 @@ class TenantIsolationTests {
                 .contains("name", "timezone");
     }
 
+    /** Un color que no se lee sobre blanco (o que no es un color) no llega a la base de datos. */
+    @ParameterizedTest
+    @ValueSource(strings = { "#ffd700", "#777777", "red", "#1e3a8", "1e3a8a" })
+    void unreadableOrMalformedBrandColorsAreRejected(String color) {
+        assertThat(mvc.patch().uri("/api/v1/business").with(spaCsrf()).cookie(a.owner().access())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"brandColor\": \"%s\"}".formatted(color)))
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .bodyJson()
+                .extractingPath("$.errors[*].field")
+                .asArray()
+                .containsExactly("brandColor");
+    }
+
     @Test
     void staffCanReadTheBusinessButNotManageIt() {
         assertThat(mvc.get().uri("/api/v1/business").cookie(staffA.access()))
                 .hasStatus(HttpStatus.OK);
         assertThat(mvc.patch().uri("/api/v1/business").with(spaCsrf()).cookie(staffA.access())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"Hack\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"Hack\", \"brandColor\": \"#000000\"}"))
                 .hasStatus(HttpStatus.FORBIDDEN)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
         assertThat(mvc.get().uri("/api/v1/business/members").cookie(staffA.access()))

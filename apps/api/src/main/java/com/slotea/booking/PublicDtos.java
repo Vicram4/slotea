@@ -26,10 +26,12 @@ public final class PublicDtos {
 
     /**
      * Lo que se puede reservar en un negocio: servicios activos que hace algún profesional activo.
-     * {@code demo}: es una copia de la demo (no se envían emails; la web lo avisa).
+     * {@code demo}: es una copia de la demo (no se envían emails; la web lo avisa). {@code brandColor}:
+     * el color del negocio en botones y selecciones (siempre se lee bien sobre blanco).
      */
     public record PublicBusinessResponse(String slug, String name,
             @Schema(example = "Europe/Madrid") String timezone,
+            @Schema(example = "#1e3a8a") String brandColor,
             List<PublicService> services, List<PublicStaff> staff, boolean demo) {
     }
 

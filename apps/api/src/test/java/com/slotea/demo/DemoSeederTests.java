@@ -23,6 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.slotea.TestcontainersConfiguration;
 import com.slotea.demo.DemoDtos.DemoSector;
 import com.slotea.demo.DemoSeeder.SeededDemo;
+import com.slotea.shared.validation.BrandColor;
 
 /**
  * El seed de cada sector crea una agenda creíble a cualquier hora: dentro del horario de cada
@@ -74,6 +75,8 @@ class DemoSeederTests {
         assertThat(count("SELECT count(*) FROM appointment WHERE business_id = ?")).isBetween(40L, 600L);
         assertThat(count("SELECT count(*) FROM staff_member WHERE business_id = ?")).isEqualTo(template.staff().size());
         assertThat(count("SELECT count(*) FROM service WHERE business_id = ?")).isEqualTo(template.services().size());
+        assertThat(jdbc.sql("SELECT brand_color FROM business WHERE id = ?").param(demo.businessId())
+                .query(String.class).single()).isEqualTo(template.brandColor());
 
         // Cada cita, dentro del horario de su profesional en hora local.
         assertThat(rows("""
@@ -115,6 +118,14 @@ class DemoSeederTests {
         // Y quedan citas por delante (los huecos libres los prueba la reserva en DemoApiTests).
         assertThat(count("SELECT count(*) FROM appointment WHERE business_id = ? AND starts_at > '%s'"
                 .formatted(instant))).isPositive();
+    }
+
+    /** En el selector de sector se distinguen de un vistazo, y ninguno es el neutro de un negocio nuevo. */
+    @Test
+    void eachSectorHasItsOwnBrandColor() {
+        List<String> colors = Arrays.stream(DemoSector.values()).map(s -> DemoTemplates.of(s).brandColor()).toList();
+
+        assertThat(colors).doesNotHaveDuplicates().doesNotContain(BrandColor.DEFAULT);
     }
 
     @Test
