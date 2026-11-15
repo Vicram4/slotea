@@ -1,0 +1,30 @@
+name: Jobs (production)
+
+# Trabajos programados de la API. La API escala a cero, así que no puede usar @Scheduled: este cron
+# la despierta y llama a /internal/jobs/* con el token compartido (secreto JOBS_TOKEN del repo).
+# Cada hora y no más a menudo: cada llamada despierta también a Neon (~5 min de cómputo), y su
+# plan gratuito da 100 CU-h al mes. Una vez por hora son unas 15.
+# Nota: GitHub desactiva los cron tras 60 días sin actividad en el repo.
+on:
+  schedule:
+    - cron: "23 * * * *" # cada hora, en el minuto 23 (minuto no redondo: menos cola en GitHub)
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  API_URL: https://slotea-api-908024172167.europe-west1.run.app
+
+jobs:
+  outbox:
+    name: Retry pending emails
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # --retry cubre el arranque en frío. El job es idempotente: repetirlo no duplica emails.
+      - name: POST /internal/jobs/outbox
+        env:
+          JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
+        run: |
+          curl -fsS --retry 3 --retry-all-errors --max-time 90 -X POST \
+            -H "X-Jobs-Token: $JOBS_TOKEN" "$API_URL/internal/jobs/outbox"
