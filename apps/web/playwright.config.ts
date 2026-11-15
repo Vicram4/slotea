@@ -24,6 +24,12 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: ci
-    ? { command: "pnpm start", url: baseURL, reuseExistingServer: false, timeout: 60_000 }
+    ? {
+        // Puerto explícito: en la CI, `PORT` es el de la API y `next start` lo cogería.
+        command: `pnpm start --port ${new URL(baseURL).port || 3000}`,
+        url: baseURL,
+        reuseExistingServer: false,
+        timeout: 60_000,
+      }
     : undefined,
 });
