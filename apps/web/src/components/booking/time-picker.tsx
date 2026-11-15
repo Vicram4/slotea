@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { type Availability, HORIZON_DAYS, type Slot } from "@/lib/booking";
-import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, shortDay } from "@/lib/dates";
+import { addDays, formatLongDate, formatMonthSpan, isOtherTimeZone, type IsoDate, shortDay } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,53 +52,67 @@ export function TimePicker({
   const afternoon = selected?.slots.filter((s) => s.time >= "14:00") ?? [];
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Semana anterior"
-          disabled={weekStart <= today}
-          onClick={() => onWeekChange(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))}
-        >
-          <ChevronLeft aria-hidden />
-        </Button>
-        <div className="grid flex-1 grid-cols-7 gap-1" aria-busy={availability.isFetching}>
+    <div className="grid gap-5">
+      <div className="grid gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium first-letter:uppercase">
+            {formatMonthSpan(weekStart, addDays(weekStart, 6))}
+          </p>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Semana anterior"
+              disabled={weekStart <= today}
+              onClick={() => onWeekChange(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))}
+            >
+              <ChevronLeft aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Semana siguiente"
+              disabled={addDays(weekStart, 7) > lastDay}
+              onClick={() => onWeekChange(addDays(weekStart, 7))}
+            >
+              <ChevronRight aria-hidden />
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-1" aria-busy={availability.isFetching}>
           {days.map((day) => {
             const label = shortDay(day.date);
             const empty = day.slots.length === 0;
+            const isSelected = day.date === selected?.date;
             return (
               <button
                 key={day.date}
                 type="button"
                 disabled={empty}
-                aria-pressed={day.date === selected?.date}
+                aria-pressed={isSelected}
                 aria-label={`${label.weekday} ${label.dayMonth}${empty ? " (sin huecos)" : ""}`}
                 onClick={() => onDateChange(day.date)}
                 className={cn(
-                  "grid rounded-md border px-1 py-2 text-center text-xs disabled:opacity-40",
-                  day.date === selected?.date ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent",
+                  "focus-visible:ring-ring/50 grid gap-0.5 rounded-md py-2 text-center outline-none focus-visible:ring-[3px]",
+                  isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-accent disabled:text-muted-foreground disabled:bg-transparent",
                 )}
               >
-                <span className="capitalize">{label.weekday}</span>
-                <span className="font-medium">{label.dayMonth}</span>
+                <span className={cn("text-[11px] uppercase", !isSelected && "text-muted-foreground")}>
+                  {label.weekday.replace(".", "")}
+                </span>
+                <span className={cn("text-base tabular-nums", !empty && "font-semibold")}>
+                  {Number(day.date.slice(8))}
+                </span>
               </button>
             );
           })}
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Semana siguiente"
-          disabled={addDays(weekStart, 7) > lastDay}
-          onClick={() => onWeekChange(addDays(weekStart, 7))}
-        >
-          <ChevronRight aria-hidden />
-        </Button>
       </div>
 
       {selected ? (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           <p className="text-sm font-medium first-letter:uppercase">{formatLongDate(selected.date)}</p>
           <SlotGroup title="Mañana" slots={morning} selected={slot} onSelect={(s) => onSlotChange(s, selected.date)} />
           <SlotGroup title="Tarde" slots={afternoon} selected={slot} onSelect={(s) => onSlotChange(s, selected.date)} />
@@ -107,7 +121,7 @@ export function TimePicker({
           )}
         </div>
       ) : (
-        <p className="text-muted-foreground text-sm">No hay huecos libres esta semana. Prueba con la siguiente.</p>
+        <p className="text-muted-foreground text-sm">Esta semana no queda nada libre. Prueba con la siguiente.</p>
       )}
     </div>
   );
@@ -127,13 +141,13 @@ function SlotGroup({
   if (slots.length === 0) return null;
   return (
     <div role="group" aria-label={title} className="grid gap-2">
-      <h3 className="text-muted-foreground text-sm">{title}</h3>
-      <div className="flex flex-wrap gap-2">
+      <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{title}</h3>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {slots.map((s) => (
           <Button
             key={s.startsAt}
             type="button"
-            size="sm"
+            className="tabular-nums"
             variant={s.startsAt === selected?.startsAt ? "default" : "outline"}
             aria-pressed={s.startsAt === selected?.startsAt}
             onClick={() => onSelect(s)}

@@ -1,22 +1,22 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarCheck } from "lucide-react";
+import { CalendarDays, Check, Clock, type LucideIcon, User, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
 
 import { FormField } from "@/components/forms/form-field";
-import { SelectField, TextareaField } from "@/components/forms/fields";
+import { TextareaField } from "@/components/forms/fields";
 import { applyServerErrors } from "@/components/forms/server-errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api/client";
 import {
   type Booking,
   manageHref,
   type PublicBusiness,
+  type PublicService,
   type Slot,
   useBook,
   usePublicBusiness,
@@ -24,7 +24,7 @@ import {
 } from "@/lib/booking";
 import { useBrandColor } from "@/lib/brand";
 import { DEMO_CUSTOMER } from "@/lib/demo";
-import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, todayIn } from "@/lib/dates";
+import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, shortDay, todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { customerSchema, type CustomerData, type CustomerValues } from "@/lib/validation/booking";
 import { formatDuration, formatPrice } from "@/lib/validation/catalog";
@@ -44,7 +44,7 @@ export function BookingPage({ slug }: { slug: string }) {
       <Alert variant="destructive">
         <AlertDescription>
           {notFound
-            ? "No encontramos este negocio. Revisa la dirección."
+            ? "No encontramos este negocio. ¿Seguro que la dirección está bien escrita?"
             : "No se pudo cargar la página. Recarga para intentarlo de nuevo."}
         </AlertDescription>
       </Alert>
@@ -93,6 +93,11 @@ function BookingFlow({
   const service = business.services.find((s) => s.id === serviceId) ?? null;
   const availability = useWeekAvailability(slug, service?.id ?? null, staffId || null, weekStart, addDays(weekStart, 6));
   const staffForService = business.staff.filter((s) => serviceId && s.serviceIds.includes(serviceId));
+  // Si solo una persona hace el servicio, no hay nada que elegir: se dice quién es y ya.
+  const staffName =
+    staffForService.length === 1
+      ? staffForService[0]!.displayName
+      : (staffForService.find((s) => s.id === staffId)?.displayName ?? "Quien esté libre");
 
   const resetTime = () => {
     setSlot(null);
@@ -101,86 +106,108 @@ function BookingFlow({
 
   if (business.services.length === 0) {
     return (
-      <>
-        <BusinessHeader business={business} />
-        <Alert>
-          <AlertDescription>Este negocio todavía no admite reservas online.</AlertDescription>
-        </Alert>
-      </>
+      <BookingShell business={business}>
+        <p className="text-muted-foreground">Este negocio todavía no tiene la agenda abierta online.</p>
+      </BookingShell>
     );
   }
 
   return (
-    <>
-      <BusinessHeader business={business} />
-
-      <section aria-labelledby="step-service" className="grid gap-3">
-        <h2 id="step-service" className="text-lg font-semibold">
-          1. Elige un servicio
-        </h2>
-        <div role="radiogroup" aria-labelledby="step-service" className="grid gap-2">
-          {business.services.map((s) => (
-            <label
-              key={s.id}
-              className={cn(
-                "hover:bg-accent flex cursor-pointer items-start gap-3 rounded-lg border p-4",
-                s.id === serviceId && "border-primary ring-primary/30 ring-2",
-              )}
-            >
-              <input
-                type="radio"
-                name="service"
-                value={s.id}
-                checked={s.id === serviceId}
-                onChange={() => {
-                  setServiceId(s.id);
-                  setStaffId("");
-                  setDate(null);
-                  resetTime();
-                }}
-                className="mt-1"
-              />
-              <span className="grid gap-1">
-                <span className="font-medium">{s.name}</span>
-                {s.description && <span className="text-muted-foreground text-sm">{s.description}</span>}
-                <span className="text-muted-foreground text-sm">
+    <BookingShell
+      business={business}
+      summary={
+        service && (
+          <BookingSummary
+            service={service}
+            staffName={staffName}
+            when={slot && date ? `${formatLongDate(date)}, ${slot.time}` : null}
+          />
+        )
+      }
+    >
+      <section aria-labelledby="step-service" className="grid gap-4">
+        <StepHeading id="step-service">¿Qué necesitas?</StepHeading>
+        <div role="radiogroup" aria-labelledby="step-service" className="divide-y overflow-hidden rounded-lg border">
+          {business.services.map((s) => {
+            const checked = s.id === serviceId;
+            return (
+              <label
+                key={s.id}
+                className={cn(
+                  "relative flex cursor-pointer items-start justify-between gap-4 px-4 py-3.5",
+                  "has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-inset",
+                  checked ? "bg-primary/5" : "hover:bg-muted/60",
+                )}
+              >
+                {checked && <span aria-hidden className="bg-primary absolute inset-y-0 left-0 w-1" />}
+                <input
+                  type="radio"
+                  name="service"
+                  value={s.id}
+                  checked={checked}
+                  onChange={() => {
+                    setServiceId(s.id);
+                    setStaffId("");
+                    setDate(null);
+                    resetTime();
+                  }}
+                  className="sr-only"
+                />
+                <span className="grid gap-0.5">
+                  <span className="font-medium">{s.name}</span>
+                  {s.description && <span className="text-muted-foreground text-sm">{s.description}</span>}
+                </span>
+                <span className="text-muted-foreground text-sm whitespace-nowrap tabular-nums">
                   {formatDuration(s.durationMin)}
                   {s.priceCents != null && ` · ${formatPrice(s.priceCents)}`}
                 </span>
-              </span>
-            </label>
-          ))}
+              </label>
+            );
+          })}
         </div>
       </section>
 
-      {service && (
-        <section aria-labelledby="step-staff" className="grid gap-3">
-          <h2 id="step-staff" className="text-lg font-semibold">
-            2. ¿Con quién?
-          </h2>
-          <SelectField
-            label="Profesional"
-            value={staffId}
-            onChange={(e) => {
-              setStaffId(e.target.value);
-              resetTime();
-            }}
-          >
-            <option value="">Cualquier profesional</option>
-            {staffForService.map((s) => (
-              <option key={s.id} value={s.id}>
+      {service && staffForService.length > 1 && (
+        <section aria-labelledby="step-staff" className="grid gap-4">
+          <StepHeading id="step-staff" hint="Si te da igual, te enseñamos los huecos de todo el equipo.">
+            ¿Con quién?
+          </StepHeading>
+          <div role="radiogroup" aria-labelledby="step-staff" className="flex flex-wrap gap-2">
+            {[{ id: "", displayName: "Me da igual" }, ...staffForService].map((s) => (
+              <label
+                key={s.id}
+                className={cn(
+                  "cursor-pointer rounded-full border px-4 py-1.5 text-sm",
+                  "has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:ring-[3px]",
+                  s.id === staffId ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted/60",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="staff"
+                  value={s.id}
+                  checked={s.id === staffId}
+                  onChange={() => {
+                    setStaffId(s.id);
+                    resetTime();
+                  }}
+                  className="sr-only"
+                />
                 {s.displayName}
-              </option>
+              </label>
             ))}
-          </SelectField>
+          </div>
         </section>
       )}
 
       {service && (
-        <section ref={timeSection} aria-labelledby="step-time" className="grid gap-3" tabIndex={-1}>
-          <h2 id="step-time" className="text-lg font-semibold">
-            3. Elige día y hora
-          </h2>
+        <section ref={timeSection} aria-labelledby="step-time" className="grid gap-4 outline-none" tabIndex={-1}>
+          <StepHeading
+            id="step-time"
+            hint={`Solo te enseñamos horas con ${formatDuration(service.durationMin)} libres por delante.`}
+          >
+            ¿Cuándo te viene bien?
+          </StepHeading>
           {conflict && (
             <Alert variant="destructive">
               <AlertDescription>{conflict}</AlertDescription>
@@ -216,9 +243,7 @@ function BookingFlow({
           slug={slug}
           demo={business.demo}
           form={form}
-          summary={`${service.name} con ${
-            staffForService.find((s) => s.id === staffId)?.displayName ?? "cualquier profesional"
-          } · ${formatLongDate(date)} a las ${slot.time}`}
+          submitLabel={`Confirmar: ${shortDay(date).weekday} ${shortDay(date).dayMonth}, ${slot.time}`}
           request={{ serviceId: service.id, staffId: staffId || null, startsAt: slot.startsAt }}
           onBooked={onBooked}
           onSlotTaken={(message) => {
@@ -229,19 +254,102 @@ function BookingFlow({
           }}
         />
       )}
+    </BookingShell>
+  );
+}
+
+/** La ficha de reserva: el negocio (y lo elegido hasta ahora) a la izquierda, los pasos a la derecha. */
+function BookingShell({
+  business,
+  summary,
+  children,
+}: {
+  business: PublicBusiness;
+  summary?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {business.demo && <DemoNotice />}
+      <div className="bg-background grid overflow-hidden rounded-xl border shadow-xs md:grid-cols-[17rem_1fr]">
+        <aside className="border-b p-6 md:border-r md:border-b-0">
+          {/* En escritorio, el resumen acompaña al bajar hasta el formulario. */}
+          <div className="grid gap-6 md:sticky md:top-8">
+          <header className="grid gap-4">
+            <span
+              aria-hidden
+              className="bg-primary text-primary-foreground grid size-10 place-items-center rounded-lg text-lg font-semibold"
+            >
+              {business.name.trim().charAt(0).toUpperCase()}
+            </span>
+            <div className="grid gap-1">
+              <h1 className="text-xl font-semibold tracking-tight">{business.name}</h1>
+              <p className="text-muted-foreground text-sm">Elige servicio, día y hora. Sin llamadas ni esperas.</p>
+            </div>
+          </header>
+          {summary}
+          </div>
+        </aside>
+        <div className="grid content-start gap-10 p-6 md:p-8">{children}</div>
+      </div>
     </>
   );
 }
 
-function BusinessHeader({ business }: { business: PublicBusiness }) {
+function StepHeading({ id, hint, children }: { id: string; hint?: string; children: ReactNode }) {
   return (
-    <header className="grid gap-3">
-      {business.demo && <DemoNotice />}
-      <div className="grid gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">{business.name}</h1>
-        <p className="text-muted-foreground">Reserva tu cita online.</p>
+    <div className="grid gap-1">
+      <h2 id={id} className="font-semibold">
+        {children}
+      </h2>
+      {hint && <p className="text-muted-foreground text-sm">{hint}</p>}
+    </div>
+  );
+}
+
+/** Lo elegido hasta ahora, siempre a la vista. */
+function BookingSummary({
+  service,
+  staffName,
+  when,
+}: {
+  service: PublicService;
+  staffName: string;
+  when: string | null;
+}) {
+  return (
+    <dl aria-label="Tu reserva" className="grid gap-2.5 border-t pt-6 text-sm">
+      <div>
+        <dt className="sr-only">Servicio</dt>
+        <dd className="text-base font-medium">{service.name}</dd>
       </div>
-    </header>
+      <SummaryItem icon={Clock} label="Duración">
+        {formatDuration(service.durationMin)}
+      </SummaryItem>
+      {service.priceCents != null && (
+        <SummaryItem icon={Wallet} label="Precio">
+          {formatPrice(service.priceCents)}
+        </SummaryItem>
+      )}
+      <SummaryItem icon={User} label="Profesional">
+        {staffName}
+      </SummaryItem>
+      {when && (
+        <SummaryItem icon={CalendarDays} label="Cuándo">
+          {when}
+        </SummaryItem>
+      )}
+    </dl>
+  );
+}
+
+function SummaryItem({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <div className="text-muted-foreground flex items-start gap-2">
+      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <dt className="sr-only">{label}</dt>
+      <dd className="first-letter:uppercase">{children}</dd>
+    </div>
   );
 }
 
@@ -250,17 +358,17 @@ function DemoNotice() {
   return (
     <div
       role="note"
-      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+      className="bg-background flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-3 text-sm"
     >
       <p>
-        <strong>Demo:</strong> estás reservando como cliente. No se envía ningún email: lo verás en la bandeja de la
-        demo.
+        <strong className="font-medium">Demo:</strong> estás reservando como cliente. No sale ningún email: lo verás
+        en la bandeja de la demo.
       </p>
       <div className="flex gap-2">
         <Button size="sm" variant="outline" asChild>
           <Link href="/panel/bandeja">Bandeja de la demo</Link>
         </Button>
-        <Button size="sm" variant="outline" asChild>
+        <Button size="sm" variant="ghost" asChild>
           <Link href="/panel/agenda">Volver al panel</Link>
         </Button>
       </div>
@@ -272,7 +380,7 @@ function CustomerSection({
   slug,
   demo,
   form,
-  summary,
+  submitLabel,
   request,
   onBooked,
   onSlotTaken,
@@ -280,7 +388,7 @@ function CustomerSection({
   slug: string;
   demo: boolean;
   form: UseFormReturn<CustomerValues, unknown, CustomerData>;
-  summary: string;
+  submitLabel: string;
   request: { serviceId: string; staffId: string | null; startsAt: string };
   onBooked: (booking: Booking) => void;
   onSlotTaken: (message: string) => void;
@@ -326,11 +434,8 @@ function CustomerSection({
   });
 
   return (
-    <section aria-labelledby="step-customer" className="grid gap-3">
-      <h2 id="step-customer" className="text-lg font-semibold">
-        4. Tus datos
-      </h2>
-      <p className="bg-muted rounded-md p-3 text-sm first-letter:uppercase">{summary}</p>
+    <section aria-labelledby="step-customer" className="grid gap-4">
+      <StepHeading id="step-customer">¿A quién esperamos?</StepHeading>
       {demo && (
         <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={fillDemoData}>
           Rellenar con datos de prueba
@@ -342,6 +447,7 @@ function CustomerSection({
           label="Email"
           type="email"
           autoComplete="email"
+          hint="Ahí te llega la confirmación, con un enlace para cambiar o cancelar la cita."
           error={errors.email?.message}
           {...register("email")}
         />
@@ -363,8 +469,8 @@ function CustomerSection({
             <AlertDescription>{formError}</AlertDescription>
           </Alert>
         )}
-        <Button type="submit" disabled={book.isPending}>
-          {book.isPending ? "Reservando…" : "Confirmar reserva"}
+        <Button type="submit" size="lg" disabled={book.isPending}>
+          {book.isPending ? "Reservando…" : submitLabel}
         </Button>
       </form>
     </section>
@@ -383,54 +489,50 @@ function BookingConfirmation({
   onAgain: () => void;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-2xl">
-          <CalendarCheck className="size-6 text-green-600" aria-hidden />
-          ¡Reserva confirmada!
-        </CardTitle>
-        <CardDescription>
+    <div className="bg-background mx-auto grid w-full max-w-lg gap-6 rounded-xl border p-6 shadow-xs sm:p-8">
+      <span className="bg-primary text-primary-foreground grid size-10 place-items-center rounded-full">
+        <Check className="size-5" aria-hidden />
+      </span>
+      <div className="grid gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Hecho. Te esperamos.</h1>
+        <p className="text-muted-foreground text-sm">
           {demo ? (
             <>
-              En la demo no se envía: el email para <strong>{booking.customerEmail}</strong> (y el aviso al negocio)
-              están en la bandeja de la demo.
+              En la demo no sale ningún email: el de <strong className="text-foreground">{booking.customerEmail}</strong>{" "}
+              (y el aviso al negocio) están en la bandeja de la demo.
             </>
           ) : (
             <>
-              Te hemos enviado un email a <strong>{booking.customerEmail}</strong> con los datos y un enlace para
-              cambiarla o cancelarla. Si no lo ves, mira en la carpeta de spam.
+              Te hemos mandado los detalles a <strong className="text-foreground">{booking.customerEmail}</strong>, con
+              un enlace para cambiar o cancelar la cita. Si no lo ves, mira en spam.
             </>
           )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-6">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Servicio</dt>
-          <dd className="font-medium">{booking.serviceName}</dd>
-          <dt className="text-muted-foreground">Profesional</dt>
-          <dd className="font-medium">{booking.staffName}</dd>
-          <dt className="text-muted-foreground">Día</dt>
-          <dd className="font-medium first-letter:uppercase">{formatLongDate(booking.date)}</dd>
-          <dt className="text-muted-foreground">Hora</dt>
-          <dd className="font-medium">
-            {booking.time}
-            {isOtherTimeZone(booking.timezone) && ` (${booking.timezone})`}
-          </dd>
-        </dl>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link href={manageHref(slug, booking.manageToken)}>Ver o cambiar mi cita</Link>
+        </p>
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 border-y py-5 text-sm">
+        <dt className="text-muted-foreground">Qué</dt>
+        <dd className="font-medium">{booking.serviceName}</dd>
+        <dt className="text-muted-foreground">Cuándo</dt>
+        <dd className="font-medium first-letter:uppercase">
+          {formatLongDate(booking.date)}, {booking.time}
+          {isOtherTimeZone(booking.timezone) && ` (${booking.timezone})`}
+        </dd>
+        <dt className="text-muted-foreground">Con quién</dt>
+        <dd className="font-medium">{booking.staffName}</dd>
+      </dl>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link href={manageHref(slug, booking.manageToken)}>Ver o cambiar mi cita</Link>
+        </Button>
+        {demo && (
+          <Button variant="outline" asChild>
+            <Link href="/panel/bandeja">Ver el email en la bandeja</Link>
           </Button>
-          {demo && (
-            <Button variant="outline" asChild>
-              <Link href="/panel/bandeja">Ver el email en la bandeja</Link>
-            </Button>
-          )}
-          <Button variant="outline" onClick={onAgain}>
-            Hacer otra reserva
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        )}
+        <Button variant="ghost" onClick={onAgain}>
+          Hacer otra reserva
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -120,5 +121,7 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* Inter con el 1 y la l distinguibles; las horas se alinean con `tabular-nums`. */
+    font-feature-settings: "cv11", "ss01";
     }
 }

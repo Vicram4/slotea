@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   formatLongDate,
+  formatMonthSpan,
   formatWeekRange,
   isIsoDate,
   minutesNowIn,
@@ -55,5 +56,11 @@ describe("dates", () => {
     expect(formatWeekRange("2026-11-23")).toBe("23 – 29 nov 2026");
     expect(formatWeekRange("2026-11-30")).toBe("30 nov – 6 dic 2026");
     expect(formatWeekRange("2026-12-28")).toBe("28 dic 2026 – 3 ene 2027");
+  });
+
+  it("names the month of a week, or both when it spans two", () => {
+    expect(formatMonthSpan("2026-11-16", "2026-11-22")).toBe("noviembre de 2026");
+    expect(formatMonthSpan("2026-11-30", "2026-12-06")).toBe("noviembre – diciembre de 2026");
+    expect(formatMonthSpan("2026-12-28", "2027-01-03")).toBe("diciembre de 2026 – enero de 2027");
   });
 });

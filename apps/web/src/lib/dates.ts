@@ -84,3 +84,13 @@ export function formatWeekRange(monday: IsoDate): string {
   if (sameMonth) return `${asUtc(monday).getUTCDate()} – ${end}`;
   return `${(sameYear ? dayMonth : dayMonthYear).format(asUtc(monday))} – ${end}`;
 }
+
+const monthYear = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" });
+const monthOnly = new Intl.DateTimeFormat("es-ES", { month: "long", timeZone: "UTC" });
+
+/** El mes de una semana: «noviembre de 2026», o «noviembre – diciembre de 2026» si cruza de mes. */
+export function formatMonthSpan(from: IsoDate, to: IsoDate): string {
+  if (from.slice(0, 7) === to.slice(0, 7)) return monthYear.format(asUtc(from));
+  const first = from.slice(0, 4) === to.slice(0, 4) ? monthOnly.format(asUtc(from)) : monthYear.format(asUtc(from));
+  return `${first} – ${monthYear.format(asUtc(to))}`;
+}

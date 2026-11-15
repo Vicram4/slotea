@@ -118,9 +118,9 @@ describe("BookingPage", () => {
     expect(screen.getByText("30 min · 15,00 €")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: /Corte/ }));
 
-    // Solo los profesionales que hacen el corte, más «cualquiera».
-    const staff = screen.getByLabelText("Profesional");
-    expect(within(staff).getAllByRole("option").map((o) => o.textContent)).toEqual(["Cualquier profesional", "Ana"]);
+    // Solo Ana hace el corte: no hay a quién elegir, el resumen ya dice con quién será.
+    expect(screen.queryByRole("radiogroup", { name: "¿Con quién?" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Tu reserva")).toHaveTextContent(/Corte.*30 min.*15,00 €.*Ana/);
 
     // Primera semana: desde hoy (en Madrid). El primer día con huecos se elige solo.
     expect(await screen.findByRole("group", { name: "Tarde" })).toBeInTheDocument();
@@ -130,12 +130,12 @@ describe("BookingPage", () => {
     expect(screen.getByRole("button", { name: /Semana anterior/ })).toBeDisabled();
 
     await userEvent.click(within(screen.getByRole("group", { name: "Tarde" })).getByRole("button", { name: "16:00" }));
-    expect(screen.getByText(/Corte con cualquier profesional/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Tu reserva")).toHaveTextContent(/16:00/);
     await fillCustomer();
     await userEvent.type(screen.getByLabelText("Teléfono (opcional)"), "600 000 000");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar reserva" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Confirmar: .*, 16:00$/ }));
 
-    expect(await screen.findByText("¡Reserva confirmada!")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hecho. Te esperamos." })).toBeInTheDocument();
     expect(screen.getByText("laura@example.test")).toBeInTheDocument(); // «te hemos enviado un email a…»
     expect(screen.getByRole("link", { name: "Ver o cambiar mi cita" })).toHaveAttribute(
       "href",
@@ -155,7 +155,14 @@ describe("BookingPage", () => {
     renderWithQuery(<BookingPage slug={SLUG} />);
 
     await userEvent.click(await screen.findByRole("radio", { name: /Barba/ }));
-    await userEvent.selectOptions(screen.getByLabelText("Profesional"), "Luis");
+    // La barba la hacen dos: se elige entre ellos o «me da igual».
+    const staff = screen.getByRole("radiogroup", { name: "¿Con quién?" });
+    expect(within(staff).getAllByRole("radio").map((r) => r.closest("label")!.textContent)).toEqual([
+      "Me da igual",
+      "Ana",
+      "Luis",
+    ]);
+    await userEvent.click(within(staff).getByRole("radio", { name: "Luis" }));
     await screen.findByRole("group", { name: "Mañana" });
     expect(availabilityQueries.at(-1)!.get("staffId")).toBe("st-luis");
 
@@ -192,7 +199,7 @@ describe("BookingPage", () => {
     await fillCustomer();
     const requestsBefore = availabilityQueries.length;
 
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar reserva" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Confirmar:/ }));
 
     expect(await screen.findByText("Ese hueco acaba de ocuparse. Elige otra hora.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Nombre")).not.toBeInTheDocument(); // hay que elegir otra hora
@@ -217,7 +224,7 @@ describe("BookingPage", () => {
 
     await userEvent.type(screen.getByLabelText("Email"), "no-es-email");
     await userEvent.type(screen.getByLabelText("Teléfono (opcional)"), "abc");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar reserva" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Confirmar:/ }));
 
     expect(await screen.findByText("Pon tu nombre.")).toBeInTheDocument();
     expect(screen.getByText("Introduce un email válido.")).toBeInTheDocument();
@@ -230,18 +237,18 @@ describe("BookingPage", () => {
     renderWithQuery(<BookingPage slug={SLUG} />);
     await userEvent.click(await screen.findByRole("radio", { name: /Corte/ }));
 
-    expect(await screen.findByText("No hay huecos libres esta semana. Prueba con la siguiente.")).toBeInTheDocument();
+    expect(await screen.findByText("Esta semana no queda nada libre. Prueba con la siguiente.")).toBeInTheDocument();
   });
 
   it("explains an unknown business and a business without services", async () => {
     server.use(http.get(BASE, () => HttpResponse.json({ status: 404, detail: "No existe ese negocio." }, { status: 404 })));
     const { unmount } = renderWithQuery(<BookingPage slug={SLUG} />);
-    expect(await screen.findByText("No encontramos este negocio. Revisa la dirección.")).toBeInTheDocument();
+    expect(await screen.findByText("No encontramos este negocio. ¿Seguro que la dirección está bien escrita?")).toBeInTheDocument();
     unmount();
 
     server.use(http.get(BASE, () => HttpResponse.json({ ...business, services: [], staff: [] })));
     renderWithQuery(<BookingPage slug={SLUG} />);
-    expect(await screen.findByText("Este negocio todavía no admite reservas online.")).toBeInTheDocument();
+    expect(await screen.findByText("Este negocio todavía no tiene la agenda abierta online.")).toBeInTheDocument();
   });
 
   it("in the demo, explains where the emails go and fills in test data", async () => {
@@ -260,15 +267,15 @@ describe("BookingPage", () => {
     renderWithQuery(<BookingPage slug={SLUG} />);
 
     const notice = await screen.findByRole("note");
-    expect(notice).toHaveTextContent("No se envía ningún email");
+    expect(notice).toHaveTextContent("No sale ningún email");
     expect(within(notice).getByRole("link", { name: "Bandeja de la demo" })).toHaveAttribute("href", "/panel/bandeja");
 
     await chooseCorteAt("09:00");
     await userEvent.click(screen.getByRole("button", { name: "Rellenar con datos de prueba" }));
     expect(screen.getByLabelText("Nombre")).toHaveValue(DEMO_CUSTOMER.fullName);
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar reserva" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Confirmar:/ }));
 
-    expect(await screen.findByText(/En la demo no se envía/)).toBeInTheDocument();
+    expect(await screen.findByText(/En la demo no sale ningún email/)).toBeInTheDocument();
     expect(body.customer).toMatchObject(DEMO_CUSTOMER);
     expect(screen.getByRole("link", { name: "Ver el email en la bandeja" })).toHaveAttribute("href", "/panel/bandeja");
   });
