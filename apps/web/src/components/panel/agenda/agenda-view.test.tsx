@@ -51,7 +51,7 @@ describe("AgendaView", () => {
     const day = await grid();
     expect(within(day).getByText("Ana")).toBeInTheDocument();
     expect(within(day).getByText("Bruno")).toBeInTheDocument();
-    expect(within(day).getByRole("button", { name: "10:00–10:30, Laura Pérez, Corte, Confirmada" })).toBeVisible();
+    expect(within(day).getByRole("button", { name: "10:00 Laura Pérez, Corte, hasta las 10:30, Confirmada" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "lunes, 23 de noviembre de 2026" })).toBeInTheDocument();
     expect(screen.getByText("2 citas")).toBeInTheDocument();
     expect(Object.fromEntries(queries.at(-1)!)).toEqual({ from: "2026-11-23", to: "2026-11-23" });
@@ -79,7 +79,7 @@ describe("AgendaView", () => {
     const week = await grid();
     expect(screen.getByRole("heading", { name: "23 – 29 nov 2026" })).toBeInTheDocument();
     expect(within(week).getByText("26 nov")).toBeInTheDocument();
-    expect(within(week).getByRole("button", { name: /^17:00–17:30, Laura Pérez/ })).toBeInTheDocument();
+    expect(within(week).getByRole("button", { name: /^17:00 Laura Pérez, .*hasta las 17:30/ })).toBeInTheDocument();
     // Sin profesional elegido, la semana es la del primero del equipo.
     expect(Object.fromEntries(queries.at(-1)!)).toEqual({ from: "2026-11-23", to: "2026-11-29", staffId: ana.id });
   });
@@ -91,7 +91,7 @@ describe("AgendaView", () => {
     const day = await grid();
     expect(within(day).queryByText("Pablo Ruiz")).not.toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("Mostrar canceladas (1)"));
-    expect(within(day).getByRole("button", { name: /Pablo Ruiz, Corte, Cancelada/ })).toBeInTheDocument();
+    expect(within(day).getByRole("button", { name: /Pablo Ruiz, Corte, hasta las .*, Cancelada$/ })).toBeInTheDocument();
   });
 
   it("marks how a past appointment went and can undo it", async () => {

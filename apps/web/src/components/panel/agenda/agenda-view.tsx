@@ -210,7 +210,7 @@ function Agenda({
                 aria-pressed={view === mode}
                 onClick={() => go({ view: mode })}
                 className={cn(
-                  "text-muted-foreground rounded px-3 py-1",
+                  "text-foreground/70 hover:text-foreground rounded px-3 py-1",
                   view === mode && "bg-background text-foreground font-medium shadow-xs",
                 )}
               >

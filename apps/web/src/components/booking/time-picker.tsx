@@ -99,9 +99,10 @@ export function TimePicker({
                     : "bg-muted hover:bg-accent disabled:text-muted-foreground disabled:bg-transparent",
                 )}
               >
-                <span className={cn("text-[11px] uppercase", !isSelected && "text-muted-foreground")}>
+                {/* Sobre el gris del botón, el gris de siempre no llega a 4,5:1. */}
+                <span className={cn("text-[11px] uppercase", !isSelected && "text-foreground/70")}>
                   {label.weekday.replace(".", "")}
-                </span>
+                </span>{" "}
                 <span className={cn("text-base tabular-nums", !empty && "font-semibold")}>
                   {Number(day.date.slice(8))}
                 </span>

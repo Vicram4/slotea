@@ -151,7 +151,8 @@ export function TimeGrid({
                   key={appointment.id}
                   type="button"
                   onClick={() => onSelect(appointment)}
-                  aria-label={`${appointment.startTime}–${appointment.endTime}, ${appointment.customer.fullName}, ${appointment.serviceName}, ${statusLabels[appointment.status]}`}
+                  // Empieza por lo que se ve («09:30 Laura»): quien usa control por voz dice lo que lee.
+                  aria-label={`${appointment.startTime} ${appointment.customer.fullName}, ${appointment.serviceName}, hasta las ${appointment.endTime}, ${statusLabels[appointment.status]}`}
                   className={cn(
                     "focus-visible:ring-ring/50 absolute z-[5] flex flex-col justify-start overflow-hidden rounded-md border-l-[3px] px-2 py-0.5 text-left text-xs leading-tight transition-[filter] hover:brightness-[0.97] focus-visible:ring-[3px] focus-visible:outline-none",
                     statusStyles[appointment.status],
@@ -168,8 +169,14 @@ export function TimeGrid({
                     <span className="opacity-70 tabular-nums">{appointment.startTime}</span>{" "}
                     <span className="font-medium">{appointment.customer.fullName}</span>
                   </span>
-                  {/* Una cita de menos de 30 min no tiene sitio para el servicio (sigue en el aria-label). */}
-                  {to - from >= 30 && <span className="block truncate opacity-70">{appointment.serviceName}</span>}
+                  {/* Una cita de menos de 30 min no tiene sitio para el servicio (sigue en el aria-label). El
+                      espacio separa las palabras en el texto del botón, que tiene que casar con su nombre. */}
+                  {to - from >= 30 && (
+                    <>
+                      {" "}
+                      <span className="block truncate opacity-70">{appointment.serviceName}</span>
+                    </>
+                  )}
                 </button>
               );
             })}

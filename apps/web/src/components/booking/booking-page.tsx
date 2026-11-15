@@ -158,9 +158,9 @@ function BookingFlow({
                 />
                 <span className="grid gap-0.5">
                   <span className="font-medium">{s.name}</span>
-                  {s.description && <span className="text-muted-foreground text-sm">{s.description}</span>}
+                  {s.description && <span className={cn("text-sm", secondary(checked))}>{s.description}</span>}
                 </span>
-                <span className="text-muted-foreground text-sm whitespace-nowrap tabular-nums">
+                <span className={cn("text-sm whitespace-nowrap tabular-nums", secondary(checked))}>
                   {formatDuration(s.durationMin)}
                   {s.priceCents != null && ` · ${formatPrice(s.priceCents)}`}
                 </span>
@@ -440,4 +440,12 @@ function BookingConfirmation({
       </div>
     </div>
   );
+}
+
+/**
+ * Texto secundario de una fila: el gris de siempre, o algo más oscuro sobre el tinte de la fila elegida
+ * (el gris sobre el tinte del color de marca no llega a 4,5:1).
+ */
+function secondary(checked: boolean): string {
+  return checked ? "text-foreground/75" : "text-muted-foreground";
 }

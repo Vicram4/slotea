@@ -126,7 +126,7 @@ function CalendarDay({ iso }: { iso: string }) {
   const date = utc(iso);
   return (
     <span aria-hidden className="grid w-11 shrink-0 overflow-hidden rounded-md border text-center">
-      <span className="bg-muted text-muted-foreground py-0.5 text-[0.65rem] uppercase">
+      <span className="bg-muted text-foreground/70 py-0.5 text-[0.65rem] uppercase">
         {monthShort.format(date).replace(".", "")}
       </span>
       <span className="py-0.5 text-base font-semibold tabular-nums">{date.getUTCDate()}</span>
