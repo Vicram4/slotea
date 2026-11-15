@@ -10,7 +10,8 @@ import { useSwitchDemoRole } from "@/lib/demo";
 
 /**
  * Aviso y atajos de la demo: cambiar de dueño a empleado (misma copia), reservar como cliente y abrir
- * la bandeja de emails. Solo se muestra en una copia de la demo.
+ * la bandeja de emails. Solo se muestra en una copia de la demo. El cambio de rol solo aparece si la
+ * copia tiene cuenta del otro rol (`demoCanSwitch`): en psicología no hay empleado.
  */
 export function DemoBar({ me }: { me: Me }) {
   const router = useRouter();
@@ -35,9 +36,11 @@ export function DemoBar({ me }: { me: Me }) {
         </span>
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={onSwitch} disabled={switchRole.isPending}>
-          {switchRole.isPending ? "Cambiando…" : owner ? "Ver como empleado" : "Ver como dueño"}
-        </Button>
+        {business.demoCanSwitch && (
+          <Button size="sm" variant="outline" onClick={onSwitch} disabled={switchRole.isPending}>
+            {switchRole.isPending ? "Cambiando…" : owner ? "Ver como empleado" : "Ver como dueño"}
+          </Button>
+        )}
         <Button size="sm" variant="outline" asChild>
           <Link href={`/${business.slug}`}>Reservar como cliente</Link>
         </Button>

@@ -31,6 +31,7 @@ export const ownerMe: Me = {
     name: "Barbería Demo",
     role: "OWNER",
     demo: false,
+    demoCanSwitch: false,
   },
   memberships: [
     {
@@ -39,6 +40,7 @@ export const ownerMe: Me = {
       name: "Barbería Demo",
       role: "OWNER",
       demo: false,
+      demoCanSwitch: false,
     },
   ],
 };

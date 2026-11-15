@@ -4,6 +4,7 @@ import { api, type Me, type Schemas, unwrap } from "@/lib/api/client";
 import { meQueryKey } from "@/lib/session";
 
 export type DemoRole = Schemas["DemoSessionRequest"]["role"];
+export type DemoSector = Schemas["DemoSessionRequest"]["sector"];
 export type InboxEmail = Schemas["InboxEmail"];
 export type InboxEmailDetail = Schemas["InboxEmailDetail"];
 
@@ -30,13 +31,13 @@ function replaceSession(queryClient: ReturnType<typeof useQueryClient>, me: Me) 
   queryClient.setQueryData(meQueryKey, me);
 }
 
-/** Crea una copia de la demo para este visitante y abre sesión en ella. */
+/** Crea una copia de la demo del sector para este visitante y abre sesión en ella. */
 export function useStartDemo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (entry: DemoEntry) => {
+    mutationFn: async ({ sector, entry }: { sector: DemoSector; entry: DemoEntry }) => {
       const role: DemoRole = entry === "STAFF" ? "STAFF" : "OWNER";
-      return unwrap(await api.POST("/api/v1/demo/sessions", { body: { role } }));
+      return unwrap(await api.POST("/api/v1/demo/sessions", { body: { sector, role } }));
     },
     onSuccess: (me) => replaceSession(queryClient, me),
   });

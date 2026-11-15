@@ -73,7 +73,7 @@ describe("PanelShell", () => {
   });
 
   it("in a demo copy, offers the inbox, the public page and switching to the employee", async () => {
-    const business = { ...ownerMe.activeBusiness!, slug: "demo-abc12345", demo: true };
+    const business = { ...ownerMe.activeBusiness!, slug: "demo-abc12345", demo: true, demoCanSwitch: true };
     const demoOwner = { ...ownerMe, activeBusiness: business, memberships: [business] };
     const asStaff = { ...demoOwner, activeBusiness: { ...business, role: "STAFF" as const } };
     let switchedTo: unknown;
@@ -98,5 +98,16 @@ describe("PanelShell", () => {
     // El empleado no tiene bandeja: los emails van al negocio y a los clientes.
     expect(await within(bar).findByRole("button", { name: "Ver como dueño" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Bandeja de la demo" })).not.toBeInTheDocument();
+  });
+
+  it("in a demo copy without an employee (psychology), does not offer switching", async () => {
+    const business = { ...ownerMe.activeBusiness!, slug: "demo-abc12345", demo: true, demoCanSwitch: false };
+    const demoOwner = { ...ownerMe, activeBusiness: business, memberships: [business] };
+    server.use(http.get("/api/v1/me", () => HttpResponse.json(demoOwner)));
+    renderWithQuery(<PanelShell>Contenido</PanelShell>);
+
+    const bar = await screen.findByRole("region", { name: "Demo" });
+    expect(within(bar).getByRole("link", { name: "Reservar como cliente" })).toBeInTheDocument();
+    expect(within(bar).queryByRole("button", { name: /Ver como/ })).not.toBeInTheDocument();
   });
 });
