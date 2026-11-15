@@ -13,6 +13,7 @@ export const business: Schemas["BusinessResponse"] = {
   name: "Barbería Demo",
   timezone: "Europe/Madrid",
   contactEmail: "negocio@example.test",
+  brandColor: "#18181b",
   demo: false,
   createdAt: "2026-11-01T10:00:00Z",
 };

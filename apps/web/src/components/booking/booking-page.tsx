@@ -22,6 +22,7 @@ import {
   usePublicBusiness,
   useWeekAvailability,
 } from "@/lib/booking";
+import { useBrandColor } from "@/lib/brand";
 import { DEMO_CUSTOMER } from "@/lib/demo";
 import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ import { TimePicker } from "./time-picker";
 export function BookingPage({ slug }: { slug: string }) {
   const business = usePublicBusiness(slug);
   const [booking, setBooking] = useState<Booking | null>(null);
+  useBrandColor(business.data?.brandColor);
 
   if (business.isPending) return <p role="status">Cargando…</p>;
   if (business.isError) {

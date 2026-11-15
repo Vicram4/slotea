@@ -18,6 +18,9 @@ export const PANEL_LINKS = [
   { href: "/panel/cierres", label: "Cierres" },
 ] as const;
 
+/** Solo para el dueño: el empleado no puede cambiar los datos del negocio (la API da 403). */
+export const SETTINGS_LINK = { href: "/panel/ajustes", label: "Ajustes" } as const;
+
 /** Solo en una copia de la demo y para el dueño (los emails van al negocio y a los clientes). */
 export const DEMO_INBOX_LINK = { href: "/panel/bandeja", label: "Bandeja de la demo" } as const;
 
@@ -97,8 +100,12 @@ export function PanelShell({ children }: { children: ReactNode }) {
   }
 
   const { user, activeBusiness } = me.data;
-  const links: readonly NavLink[] =
-    activeBusiness?.demo && activeBusiness.role === "OWNER" ? [...PANEL_LINKS, DEMO_INBOX_LINK] : PANEL_LINKS;
+  const isOwner = activeBusiness?.role === "OWNER";
+  const links: readonly NavLink[] = [
+    ...PANEL_LINKS,
+    ...(isOwner ? [SETTINGS_LINK] : []),
+    ...(isOwner && activeBusiness.demo ? [DEMO_INBOX_LINK] : []),
+  ];
 
   const onLogout = async () => {
     await logout.mutateAsync().catch(() => undefined);

@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 
 import { api, type Schemas, unwrap } from "@/lib/api/client";
 import type { IsoDate } from "@/lib/dates";
+import { meQueryKey } from "@/lib/session";
 
 export type Agenda = Schemas["AgendaResponse"];
 export type AgendaAppointment = Schemas["AgendaAppointment"];
@@ -31,6 +32,21 @@ export function useBusiness() {
     queryKey: agendaKeys.business,
     queryFn: async () => unwrap(await api.GET("/api/v1/business")),
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Cambia los datos del negocio (solo el dueño). El nombre también sale en la sesión (la barra del
+ * panel), así que se vuelve a pedir.
+ */
+export function useUpdateBusiness() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Schemas["UpdateBusinessRequest"]) => unwrap(await api.PATCH("/api/v1/business", { body })),
+    onSuccess: (business) => {
+      queryClient.setQueryData(agendaKeys.business, business);
+      return queryClient.invalidateQueries({ queryKey: meQueryKey });
+    },
   });
 }
 

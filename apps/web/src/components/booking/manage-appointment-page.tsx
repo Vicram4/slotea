@@ -29,6 +29,7 @@ import {
   usePublicBusiness,
   useRescheduleAppointment,
 } from "@/lib/booking";
+import { useBrandColor } from "@/lib/brand";
 import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, todayIn } from "@/lib/dates";
 
 import { TimePicker } from "./time-picker";
@@ -50,6 +51,7 @@ export function ManageAppointmentPage({ slug, token }: { slug: string; token: st
   const business = usePublicBusiness(slug);
   const appointment = useManagedAppointment(slug, token);
   const [notice, setNotice] = useState<string | null>(null);
+  useBrandColor(business.data?.brandColor);
 
   if (business.isPending || appointment.isPending) return <p role="status">Cargando…</p>;
   if (business.isError || appointment.isError) {

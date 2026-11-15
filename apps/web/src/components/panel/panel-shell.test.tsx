@@ -69,6 +69,7 @@ describe("PanelShell", () => {
 
     expect(await screen.findByText("Contenido")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Demo" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ajustes" })).toHaveAttribute("href", "/panel/ajustes");
     expect(screen.queryByRole("link", { name: "Bandeja de la demo" })).not.toBeInTheDocument();
   });
 
@@ -98,6 +99,7 @@ describe("PanelShell", () => {
     // El empleado no tiene bandeja: los emails van al negocio y a los clientes.
     expect(await within(bar).findByRole("button", { name: "Ver como dueño" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Bandeja de la demo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ajustes" })).not.toBeInTheDocument();
   });
 
   it("in a demo copy without an employee (psychology), does not offer switching", async () => {

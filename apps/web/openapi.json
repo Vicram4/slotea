@@ -1420,6 +1420,10 @@
       "BusinessResponse" : {
         "type" : "object",
         "properties" : {
+          "brandColor" : {
+            "type" : "string",
+            "example" : "#1e3a8a"
+          },
           "contactEmail" : {
             "type" : "string"
           },
@@ -1444,7 +1448,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "contactEmail", "createdAt", "demo", "id", "name", "slug", "timezone" ]
+        "required" : [ "brandColor", "contactEmail", "createdAt", "demo", "id", "name", "slug", "timezone" ]
       },
       "ClosureRequest" : {
         "type" : "object",
@@ -1798,6 +1802,10 @@
       "PublicBusinessResponse" : {
         "type" : "object",
         "properties" : {
+          "brandColor" : {
+            "type" : "string",
+            "example" : "#1e3a8a"
+          },
           "demo" : {
             "type" : "boolean"
           },
@@ -1824,7 +1832,7 @@
             "example" : "Europe/Madrid"
           }
         },
-        "required" : [ "demo", "name", "services", "slug", "staff", "timezone" ]
+        "required" : [ "brandColor", "demo", "name", "services", "slug", "staff", "timezone" ]
       },
       "PublicService" : {
         "type" : "object",
@@ -2109,6 +2117,10 @@
       "UpdateBusinessRequest" : {
         "type" : "object",
         "properties" : {
+          "brandColor" : {
+            "type" : [ "string", "null" ],
+            "example" : "#1e3a8a"
+          },
           "contactEmail" : {
             "type" : [ "string", "null" ],
             "format" : "email",

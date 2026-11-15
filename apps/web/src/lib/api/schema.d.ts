@@ -657,6 +657,8 @@ export interface components {
             timezone: string;
         };
         BusinessResponse: {
+            /** @example #1e3a8a */
+            brandColor: string;
             contactEmail: string;
             /** Format: date-time */
             createdAt: string;
@@ -802,6 +804,8 @@ export interface components {
             time: string;
         };
         PublicBusinessResponse: {
+            /** @example #1e3a8a */
+            brandColor: string;
             demo: boolean;
             name: string;
             services: components["schemas"]["PublicService"][];
@@ -909,6 +913,8 @@ export interface components {
             start: string;
         };
         UpdateBusinessRequest: {
+            /** @example #1e3a8a */
+            brandColor?: string | null;
             /** Format: email */
             contactEmail?: string | null;
             name?: string | null;

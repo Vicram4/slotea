@@ -19,6 +19,7 @@ const business: PublicBusiness = {
   slug: SLUG,
   name: "Barbería Demo",
   timezone: "Europe/Madrid",
+  brandColor: "#1e3a8a",
   demo: false,
   services: [{ id: "s-corte", name: "Corte", description: null, durationMin: 30, priceCents: 1500 }],
   staff: [

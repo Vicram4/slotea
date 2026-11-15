@@ -18,6 +18,7 @@ const business: PublicBusiness = {
   slug: SLUG,
   name: "Barbería Demo",
   timezone: "Europe/Madrid",
+  brandColor: "#1e3a8a",
   demo: false,
   services: [
     { id: "s-corte", name: "Corte", description: "Lavado incluido", durationMin: 30, priceCents: 1500 },
@@ -88,6 +89,18 @@ async function fillCustomer() {
 describe("BookingPage", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=t; path=/";
+  });
+
+  it("wears the business brand color and takes it off when leaving", async () => {
+    businessWithAvailability();
+    const { unmount } = renderWithQuery(<BookingPage slug={SLUG} />);
+
+    expect(await screen.findByRole("heading", { name: "Barbería Demo" })).toBeInTheDocument();
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue("--primary")).toBe("#1e3a8a");
+
+    unmount();
+    expect(style.getPropertyValue("--primary")).toBe("");
   });
 
   it("books a slot as a guest from service to confirmation", async () => {
