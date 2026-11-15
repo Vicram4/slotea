@@ -19,7 +19,7 @@ async function expectNoViolations(page: Page, name: string) {
 }
 
 test("public pages", async ({ page }) => {
-  for (const path of ["/", "/login", "/registro"]) {
+  for (const path of ["/", "/login", "/registro", "/privacidad"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expectNoViolations(page, path);

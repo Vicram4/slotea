@@ -28,6 +28,10 @@ export default function Page({ params }: PageProps<"/[slug]/cita/[token]">) {
         <Link href="/" className="underline-offset-4 hover:underline">
           Slotea
         </Link>
+        {" · "}
+        <Link href="/privacidad" className="underline-offset-4 hover:underline">
+          Privacidad
+        </Link>
       </footer>
     </main>
   );

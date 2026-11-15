@@ -69,14 +69,19 @@ export default function Home() {
 
       <footer className="text-muted-foreground flex flex-wrap justify-between gap-x-6 gap-y-2 border-t py-6 text-xs">
         <span>Slotea es un proyecto de portfolio. Los negocios de la demo y sus clientes son ficticios.</span>
-        <a
-          href="https://github.com/Vicram4/slotea"
-          className="hover:text-foreground underline-offset-4 hover:underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Código en GitHub
-        </a>
+        <span className="flex gap-4">
+          <Link href="/privacidad" className="hover:text-foreground underline-offset-4 hover:underline">
+            Privacidad
+          </Link>
+          <a
+            href="https://github.com/Vicram4/slotea"
+            className="hover:text-foreground underline-offset-4 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Código en GitHub
+          </a>
+        </span>
       </footer>
     </div>
   );

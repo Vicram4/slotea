@@ -8,6 +8,7 @@ test("a business owner signs up, logs out and logs back in", async ({ page }) =>
   const password = "una-contraseña-larga";
 
   await page.goto("/registro");
+  await expect(page.getByRole("note")).toContainText("Proyecto de demostración.");
   await field(page, "Nombre del negocio").fill(`Negocio E2E ${id}`);
   await field(page, "Tu nombre").fill("Persona de Prueba");
   await field(page, "Email").fill(email);
