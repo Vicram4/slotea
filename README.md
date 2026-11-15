@@ -8,6 +8,8 @@ cancelar la cita. Multi-tenant: muchos negocios en la misma aplicación, sin que
 taller, psicología, fisioterapia o veterinaria) y entra como negocio, como empleado o como cliente. Sin
 registrarte: cada visitante tiene su propia copia, con la agenda llena, que se borra a las 24 h.
 
+![Una reserva de principio a fin: sector, servicio, profesional, hora, datos y confirmación](docs/img/reserva.gif)
+
 ![Agenda del día con las citas de cada profesional](docs/img/agenda.png)
 
 | Página de reservas | Agenda en el móvil |
