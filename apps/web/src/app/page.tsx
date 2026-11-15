@@ -67,8 +67,16 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="text-muted-foreground border-t py-6 text-xs">
-        Slotea es un proyecto de portfolio. Los negocios de la demo y sus clientes son ficticios.
+      <footer className="text-muted-foreground flex flex-wrap justify-between gap-x-6 gap-y-2 border-t py-6 text-xs">
+        <span>Slotea es un proyecto de portfolio. Los negocios de la demo y sus clientes son ficticios.</span>
+        <a
+          href="https://github.com/Vicram4/slotea"
+          className="hover:text-foreground underline-offset-4 hover:underline"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Código en GitHub
+        </a>
       </footer>
     </div>
   );
