@@ -1,0 +1,42 @@
+# Actualizaciones de dependencias. Una vez al mes y agrupadas (un PR por ecosistema) para no llenar el
+# repo de PRs. Las versiones mayores van en un PR aparte: suelen pedir cambios de código.
+# Las alertas de seguridad (Dependabot security updates) llegan aparte, en cuanto se publican.
+version: 2
+
+updates:
+  - package-ecosystem: maven
+    directory: /apps/api
+    schedule:
+      interval: monthly
+    groups:
+      api-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(api)"
+
+  - package-ecosystem: npm # también cubre pnpm (lee pnpm-lock.yaml)
+    directory: /apps/web
+    schedule:
+      interval: monthly
+    groups:
+      web-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(web)"
+
+  - package-ecosystem: docker
+    directory: /apps/api
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(api)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
