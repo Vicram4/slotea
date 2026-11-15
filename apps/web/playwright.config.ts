@@ -22,7 +22,20 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Las capturas del README: solo con `pnpm screenshots` (no corren con los tests).
+    ...(process.env.npm_lifecycle_event === "screenshots"
+      ? [
+          {
+            name: "screenshots",
+            testMatch: /\.screenshots\.ts$/,
+            // El campo de fecha usa el idioma del navegador, no el de la página.
+            use: { ...devices["Desktop Chrome"], launchOptions: { args: ["--lang=es-ES"] } },
+          },
+        ]
+      : []),
+  ],
   webServer: ci
     ? {
         // Puerto explícito: en la CI, `PORT` es el de la API y `next start` lo cogería.
