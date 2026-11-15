@@ -14,6 +14,9 @@ final class BookingPolicy {
     /** Hasta cuántos días vista se puede reservar (hoy + 60). */
     static final int HORIZON_DAYS = 60;
 
+    /** Hasta cuándo puede el cliente cancelar o cambiar la cita por su enlace: 2 h antes de empezar. */
+    static final Duration CHANGE_DEADLINE = Duration.ofHours(2);
+
     /** Días por consulta de disponibilidad: la web pide de semana en semana. */
     static final int MAX_RANGE_DAYS = 14;
 

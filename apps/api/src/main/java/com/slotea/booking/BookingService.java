@@ -3,9 +3,12 @@ package com.slotea.booking;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
@@ -18,8 +21,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.slotea.booking.AvailabilityService.BookableSlot;
 import com.slotea.booking.PublicDtos.BookingRequest;
 import com.slotea.booking.PublicDtos.BookingResponse;
+import com.slotea.business.Business;
 import com.slotea.business.StaffMember;
-import com.slotea.shared.security.OpaqueTokens;
+import com.slotea.notification.AppointmentEmail;
+import com.slotea.notification.EmailOutbox;
+import com.slotea.notification.EmailType;
+import com.slotea.shared.links.AppointmentLinks;
 import com.slotea.shared.tenancy.TenantContext;
 import com.slotea.shared.web.ApiException;
 import com.slotea.shared.web.DatabaseErrors;
@@ -44,6 +51,9 @@ import com.slotea.shared.web.DatabaseErrors;
  * <p>El bloqueo solo <em>ordena</em>; la garantía sigue siendo la restricción de la BD (ver
  * {@code BookingConcurrencyTests}). Un 40P01 se sigue tratando como «ocupado», por si acaso: en un
  * deadlock siempre gana al menos una transacción.
+ *
+ * <p><strong>Email de confirmación.</strong> Se encola en la misma transacción que la cita (outbox) y
+ * se envía después del commit; si el SMTP falla, la reserva sigue siendo válida y el job lo reintenta.
  */
 @Service
 class BookingService {
@@ -55,15 +65,20 @@ class BookingService {
     private final AvailabilityService availability;
     private final Customers customers;
     private final AppointmentRepository appointments;
+    private final AppointmentLinks links;
+    private final EmailOutbox emails;
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
     private final Clock clock;
 
     BookingService(AvailabilityService availability, Customers customers, AppointmentRepository appointments,
-            JdbcClient jdbc, PlatformTransactionManager transactionManager, Clock clock) {
+            AppointmentLinks links, EmailOutbox emails, JdbcClient jdbc, PlatformTransactionManager transactionManager,
+            Clock clock) {
         this.availability = availability;
         this.customers = customers;
         this.appointments = appointments;
+        this.links = links;
+        this.emails = emails;
         this.jdbc = jdbc;
         this.tx = new TransactionTemplate(transactionManager);
         this.clock = clock;
@@ -80,13 +95,29 @@ class BookingService {
         String phone = clean(customer.phone());
         String notes = clean(request.notes());
 
-        for (StaffMember staff : slot.staff()) {
+        Booked booked = withFirstFreeStaff(slot.staff(), staff -> {
+            UUID customerId = customers.findOrCreate(email, fullName, phone);
+            return create(slot, staff, customerId, email, fullName, notes);
+        }).orElseThrow(() -> ApiException.conflict(SLOT_TAKEN));
+        emails.sendNow(booked.emailId()); // ya confirmada: si falla, lo reintenta el job
+        return booked.response();
+    }
+
+    /**
+     * Prueba {@code attempt} con cada profesional, en orden: cada intento en su propia transacción y
+     * en la cola de ese profesional. Devuelve el resultado del primero que no choca con otra cita, o
+     * vacío si todos estaban ocupados. Lo usan la reserva y el cambio de hora.
+     */
+    <T> Optional<T> withFirstFreeStaff(List<StaffMember> candidates, Function<StaffMember, T> attempt) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("Each booking attempt needs its own transaction");
+        }
+        for (StaffMember staff : candidates) {
             try {
-                return Objects.requireNonNull(tx.execute(_ -> {
+                return Optional.of(Objects.requireNonNull(tx.execute(_ -> {
                     queueFor(staff);
-                    UUID customerId = customers.findOrCreate(email, fullName, phone);
-                    return create(slot, staff, customerId, email, notes);
-                }));
+                    return attempt.apply(staff);
+                })));
             } catch (DataAccessException e) {
                 if (!slotTaken(e)) {
                     throw e;
@@ -94,24 +125,33 @@ class BookingService {
                 // Otro cliente se ha llevado a este profesional en este instante: probamos con el siguiente.
             }
         }
-        throw ApiException.conflict(SLOT_TAKEN);
+        return Optional.empty();
     }
 
-    private BookingResponse create(BookableSlot slot, StaffMember staff, UUID customerId, String email,
+    private record Booked(BookingResponse response, UUID emailId) {
+    }
+
+    private Booked create(BookableSlot slot, StaffMember staff, UUID customerId, String email, String fullName,
             @Nullable String notes) {
         var service = slot.service();
         Instant endsAt = slot.startsAt().plus(Duration.ofMinutes(service.getDurationMin()));
         Instant blockedUntil = endsAt.plus(Duration.ofMinutes(service.getBufferMin()));
-        // El token del enlace para gestionar la cita se envía por email en la fase 7. Solo guardamos su hash.
-        byte[] tokenHash = OpaqueTokens.sha256(OpaqueTokens.generate());
-        var appointment = new Appointment(staff.getId(), service.getId(), customerId, slot.startsAt(), endsAt,
-                blockedUntil, tokenHash, notes, clock.instant());
+        // Solo guardamos el hash del token del enlace; el token se recalcula al enviar el email.
+        UUID id = Appointment.newId();
+        var appointment = new Appointment(id, staff.getId(), service.getId(), customerId, slot.startsAt(), endsAt,
+                blockedUntil, links.tokenHash(id), notes, clock.instant());
         // saveAndFlush: el INSERT (y la posible violación 23P01) ocurre aquí, dentro del try del llamante.
         appointment = appointments.saveAndFlush(appointment);
+
+        Business business = slot.business();
+        UUID emailId = emails.enqueue(EmailType.BOOKING_CONFIRMED, email, new AppointmentEmail(id,
+                business.getSlug(), business.getName(), business.getContactEmail(), slot.zone().getId(), fullName,
+                service.getName(), staff.getDisplayName(), appointment.getStartsAt(), appointment.getEndsAt(), null));
+
         var local = slot.startsAt().atZone(slot.zone());
-        return new BookingResponse(appointment.getId(), service.getName(), staff.getDisplayName(),
+        return new Booked(new BookingResponse(appointment.getId(), service.getName(), staff.getDisplayName(),
                 appointment.getStartsAt(), appointment.getEndsAt(), local.toLocalDate(), local.toLocalTime(),
-                slot.zone().getId(), email);
+                slot.zone().getId(), email, links.token(id)), emailId);
     }
 
     /** Cola por profesional hasta el final de la transacción (ver la documentación de la clase). */

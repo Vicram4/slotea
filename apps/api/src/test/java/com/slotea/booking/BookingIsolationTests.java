@@ -106,6 +106,22 @@ class BookingIsolationTests {
         assertThat(count("customer", b)).isEqualTo(1);
     }
 
+    @Test
+    void aManageLinkOnlyWorksUnderItsOwnBusiness() {
+        String tokenB = booking.bookForToken(b.slug(), serviceB, staffB, at(day, "09:00"),
+                AuthApi.unique("b") + "@example.test");
+
+        // El token es válido, pero no en el negocio A: 404, como uno inventado. Y B queda intacto.
+        assertThat(booking.managed(a.slug(), tokenB)).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(booking.manageAvailability(a.slug(), tokenB, day, day)).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(booking.cancel(a.slug(), tokenB)).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(booking.reschedule(a.slug(), tokenB, at(day, "10:00"), null)).hasStatus(HttpStatus.NOT_FOUND);
+
+        assertThat(booking.managed(b.slug(), tokenB)).hasStatus(HttpStatus.OK)
+                .bodyJson().isLenientlyEqualTo("""
+                        {"status": "CONFIRMED", "time": "09:00"}""");
+    }
+
     private long count(String table, Tenant tenant) {
         return jdbc.sql("SELECT count(*) FROM " + table + " WHERE business_id = ?").param(tenant.businessId())
                 .query(Long.class).single();

@@ -28,6 +28,23 @@ class Customers {
         this.jdbc = jdbc;
     }
 
+    /** Cómo escribir a un cliente. */
+    record Contact(String email, String fullName) {
+
+        @Override
+        public String toString() {
+            return "Contact[***]";
+        }
+    }
+
+    /** Email y nombre de un cliente del negocio actual. */
+    Contact contact(UUID customerId) {
+        return jdbc.sql("SELECT email, full_name FROM customer WHERE business_id = ? AND id = ?")
+                .params(TenantContext.requireBusinessId(), customerId)
+                .query((rs, _) -> new Contact(rs.getString("email"), rs.getString("full_name")))
+                .single();
+    }
+
     /** Id del cliente con ese email (ya normalizado), creándolo si no existe. */
     UUID findOrCreate(String email, String fullName, @Nullable String phone) {
         UUID businessId = TenantContext.requireBusinessId();

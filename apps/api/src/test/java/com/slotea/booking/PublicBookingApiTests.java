@@ -19,11 +19,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
+import com.jayway.jsonpath.JsonPath;
 import com.slotea.TestcontainersConfiguration;
+import com.slotea.shared.links.AppointmentLinks;
+import com.slotea.shared.security.OpaqueTokens;
 import com.slotea.support.AuthApi;
 import com.slotea.support.AuthApi.Tenant;
 import com.slotea.support.BookingApi;
 import com.slotea.support.CatalogApi;
+import com.slotea.support.Mailpit;
 
 /** La reserva pública de punta a punta (HTTP sin sesión → BD real). */
 @SpringBootTest
@@ -39,6 +43,12 @@ class PublicBookingApiTests {
 
     @Autowired
     PasswordEncoder passwordEncoder;
+
+    @Autowired
+    Mailpit mailpit;
+
+    @Autowired
+    AppointmentLinks links;
 
     CatalogApi catalog;
     BookingApi booking;
@@ -167,6 +177,32 @@ class PublicBookingApiTests {
         assertThat(row).containsEntry("status", "CONFIRMED").containsEntry("email", "laura@example.test")
                 .containsEntry("phone", "+34 600 000 000");
         assertThat(((java.sql.Timestamp) row.get("blocked_until")).toInstant()).isEqualTo(at(day, "09:35"));
+    }
+
+    @Test
+    void bookingSendsTheConfirmationEmailWithItsManageLink() {
+        String email = AuthApi.unique("laura") + "@example.test";
+        var result = booking.book(tenant.slug(), haircut, ana, at(day, "09:00"), email);
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        UUID appointmentId = UUID.fromString(JsonPath.read(AuthApi.body(result), "$.id"));
+
+        // El envío es síncrono tras el commit: cuando llega el 201, el email ya está en Mailpit.
+        var message = mailpit.awaitOne(email);
+        assertThat(message.subject()).startsWith("Cita confirmada: Corte, ").endsWith(" a las 09:00");
+        assertThat(message.from()).isEqualTo("reservas@slotea.test");
+        assertThat(message.replyTo()).as("si el cliente responde, le contesta el negocio")
+                .containsExactly(tenant.ownerEmail());
+
+        // El enlace lleva el token cuyo hash guardó la reserva (el token en sí no está en la BD).
+        String manageUrl = "https://web.example.test/" + tenant.slug() + "/cita/" + links.token(appointmentId);
+        assertThat(message.text()).contains("Corte", "Ana", "09:00 – 09:30", manageUrl);
+        assertThat(message.html()).contains("Tu cita está confirmada", "href=\"" + manageUrl + "\"");
+        byte[] storedHash = jdbc.sql("SELECT manage_token_hash FROM appointment WHERE id = ?")
+                .param(appointmentId).query(byte[].class).single();
+        assertThat(storedHash).isEqualTo(OpaqueTokens.sha256(links.token(appointmentId)));
+
+        assertThat(jdbc.sql("SELECT status FROM email_outbox WHERE appointment_id = ?").param(appointmentId)
+                .query(String.class).list()).containsExactly("SENT");
     }
 
     @Test

@@ -73,11 +73,36 @@ public final class PublicDtos {
         }
     }
 
-    /** Resumen para la pantalla de confirmación. */
+    /**
+     * Resumen para la pantalla de confirmación. {@code manageToken} es el mismo token del enlace del
+     * email: así se puede gestionar la cita aunque el email acabe en spam (o en la demo, sin email).
+     */
     public record BookingResponse(UUID id, String serviceName, String staffName, Instant startsAt, Instant endsAt,
             LocalDate date,
             @Schema(type = "string", pattern = "^[0-2][0-9]:[0-5][0-9]$", example = "10:15")
             @JsonFormat(pattern = "HH:mm") LocalTime time,
-            String timezone, String customerEmail) {
+            String timezone, String customerEmail, String manageToken) {
+
+        @Override
+        public String toString() {
+            return "BookingResponse[id=" + id + ", customerEmail=***, manageToken=***]";
+        }
+    }
+
+    /**
+     * Una cita vista desde su enlace de gestión. {@code changeable}: si aún se puede cancelar o cambiar
+     * (confirmada y hasta {@code changeableUntil}, 2 h antes de empezar).
+     */
+    public record ManagedAppointmentResponse(UUID id, AppointmentStatus status, UUID serviceId, String serviceName,
+            UUID staffId, String staffName, String customerName, Instant startsAt, Instant endsAt, LocalDate date,
+            @Schema(type = "string", pattern = "^[0-2][0-9]:[0-5][0-9]$", example = "10:15")
+            @JsonFormat(pattern = "HH:mm") LocalTime time,
+            @Schema(type = "string", pattern = "^[0-2][0-9]:[0-5][0-9]$", example = "10:45")
+            @JsonFormat(pattern = "HH:mm") LocalTime endTime,
+            String timezone, boolean changeable, Instant changeableUntil) {
+    }
+
+    /** Nueva hora (uno de los huecos ofrecidos). {@code staffId} omitido = «cualquier profesional». */
+    public record RescheduleRequest(@NotNull Instant startsAt, @Nullable UUID staffId) {
     }
 }

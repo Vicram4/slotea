@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+import com.jayway.jsonpath.JsonPath;
 import com.slotea.support.AuthApi.Session;
 
 /** Atajos para la página pública de reservas: preparar un negocio reservable y reservar sin sesión. */
@@ -80,6 +81,40 @@ public final class BookingApi {
                 {"serviceId": "%s", "staffId": %s, "startsAt": "%s",
                  "customer": {"fullName": "Cliente de prueba", "email": "%s", "phone": "+34 600 000 000"}}
                 """.formatted(serviceId, staff, startsAt, email));
+    }
+
+    /** Reserva y devuelve el token del enlace de gestión (el mismo que va en el email). */
+    public String bookForToken(String slug, UUID serviceId, @Nullable UUID staffId, Instant startsAt, String email) {
+        MvcTestResult result = book(slug, serviceId, staffId, startsAt, email);
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        return JsonPath.read(AuthApi.body(result), "$.manageToken");
+    }
+
+    // --- Enlace de gestión de la cita -----------------------------------------------------------
+
+    private static String manage(String slug, String token) {
+        return "/api/v1/public/businesses/" + slug + "/appointments/manage/" + token;
+    }
+
+    public MvcTestResult managed(String slug, String token) {
+        return mvc.get().uri(manage(slug, token)).exchange();
+    }
+
+    public MvcTestResult cancel(String slug, String token) {
+        return mvc.post().uri(manage(slug, token) + "/cancel").with(spaCsrf()).exchange();
+    }
+
+    public MvcTestResult manageAvailability(String slug, String token, LocalDate from, LocalDate to) {
+        return mvc.get().uri(manage(slug, token) + "/availability?from=" + from + "&to=" + to).exchange();
+    }
+
+    public MvcTestResult reschedule(String slug, String token, Instant startsAt, @Nullable UUID staffId) {
+        String staff = staffId == null ? "null" : "\"" + staffId + "\"";
+        return mvc.post().uri(manage(slug, token) + "/reschedule").with(spaCsrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"startsAt": "%s", "staffId": %s}""".formatted(startsAt, staff))
+                .exchange();
     }
 
     public MvcTestResult bookJson(String slug, String json) {

@@ -3,6 +3,7 @@ package com.slotea.booking;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,4 +24,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
             order by a.startsAt
             """)
     List<Appointment> findBlocking(Collection<UUID> staffIds, Instant from, Instant to);
+
+    /** La cita del enlace de gestión, dentro del negocio de la petición (el del slug). */
+    Optional<Appointment> findByManageTokenHash(byte[] manageTokenHash);
 }

@@ -75,10 +75,19 @@ class AvailabilityService {
     }
 
     /** Un hueco concreto que se puede reservar, con sus profesionales libres en el orden en que probarlos. */
-    record BookableSlot(Offering service, ZoneId zone, Instant startsAt, List<StaffMember> staff) {
+    record BookableSlot(Business business, Offering service, ZoneId zone, Instant startsAt, List<StaffMember> staff) {
     }
 
     AvailabilityResponse availability(UUID serviceId, @Nullable UUID staffId, LocalDate from, LocalDate to) {
+        return availability(serviceId, staffId, from, to, null);
+    }
+
+    /**
+     * Con {@code movingAppointmentId}, los huecos para mover esa cita: ella misma no cuenta como
+     * ocupada (si no, no se podría retrasar 15 minutos, porque se solaparía consigo misma).
+     */
+    AvailabilityResponse availability(UUID serviceId, @Nullable UUID staffId, LocalDate from, LocalDate to,
+            @Nullable UUID movingAppointmentId) {
         if (to.isBefore(from)) {
             throw ApiException.invalidField("to", "debe ser igual o posterior a from");
         }
@@ -96,7 +105,7 @@ class AvailabilityService {
             byDay.put(d, new ArrayList<>());
         }
         if (!first.isAfter(last)) {
-            for (Slot slot : compute(request, first, last).slots()) {
+            for (Slot slot : compute(request, first, last, movingAppointmentId).slots()) {
                 byDay.get(slot.date()).add(new SlotResponse(slot.time(), slot.startsAt()));
             }
         }
@@ -110,13 +119,18 @@ class AvailabilityService {
      * reglas viven en un solo sitio) y devuelve los profesionales libres, el menos ocupado ese día primero.
      */
     BookableSlot findSlot(UUID serviceId, @Nullable UUID staffId, Instant startsAt) {
+        return findSlot(serviceId, staffId, startsAt, null);
+    }
+
+    /** Igual, pero para mover {@code movingAppointmentId} (ver {@link #availability(UUID, UUID, LocalDate, LocalDate, UUID)}). */
+    BookableSlot findSlot(UUID serviceId, @Nullable UUID staffId, Instant startsAt, @Nullable UUID movingAppointmentId) {
         Request request = load(serviceId, staffId);
         LocalDate date = LocalDate.ofInstant(startsAt, request.zone());
         LocalDate today = LocalDate.now(clock.withZone(request.zone()));
         if (date.isBefore(today) || date.isAfter(today.plusDays(BookingPolicy.HORIZON_DAYS))) {
             throw ApiException.conflict(SLOT_UNAVAILABLE);
         }
-        Computed computed = compute(request, date, date);
+        Computed computed = compute(request, date, date, movingAppointmentId);
         Slot slot = computed.slots().stream()
                 .filter(s -> s.startsAt().equals(startsAt))
                 .findFirst()
@@ -132,10 +146,10 @@ class AvailabilityService {
                 .sorted(Comparator.comparingLong(id -> load.getOrDefault(id, 0L)))
                 .map(byId::get)
                 .toList();
-        return new BookableSlot(request.service(), request.zone(), startsAt, free);
+        return new BookableSlot(request.business(), request.service(), request.zone(), startsAt, free);
     }
 
-    private record Request(ZoneId zone, Offering service, List<StaffMember> staff) {
+    private record Request(Business business, ZoneId zone, Offering service, List<StaffMember> staff) {
     }
 
     private record Computed(List<Slot> slots, List<Appointment> appointments) {
@@ -156,10 +170,10 @@ class AvailabilityService {
         if (staffId != null && staff.isEmpty()) {
             throw ApiException.notFound("Ese profesional no existe o no hace este servicio.");
         }
-        return new Request(ZoneId.of(business.getTimezone()), service, staff);
+        return new Request(business, ZoneId.of(business.getTimezone()), service, staff);
     }
 
-    private Computed compute(Request request, LocalDate first, LocalDate last) {
+    private Computed compute(Request request, LocalDate first, LocalDate last, @Nullable UUID movingAppointmentId) {
         if (request.staff().isEmpty()) {
             return new Computed(List.of(), List.of());
         }
@@ -187,7 +201,9 @@ class AvailabilityService {
         // Límites del periodo en UTC desde la zona del negocio: un día de cambio de hora dura 23 o 25 h.
         Instant from = first.atStartOfDay(zone).toInstant();
         Instant to = last.plusDays(1).atStartOfDay(zone).toInstant();
-        List<Appointment> blocking = appointments.findBlocking(staffIds, from, to);
+        List<Appointment> blocking = appointments.findBlocking(staffIds, from, to).stream()
+                .filter(a -> !a.getId().equals(movingAppointmentId))
+                .toList();
         Map<UUID, List<Busy>> busy = blocking.stream()
                 .collect(Collectors.groupingBy(Appointment::getStaffId, Collectors.mapping(
                         a -> new Busy(a.getStartsAt(), a.getBlockedUntil()), Collectors.toList())));

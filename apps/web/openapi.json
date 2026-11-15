@@ -398,6 +398,176 @@
         "tags" : [ "public" ]
       }
     },
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}" : {
+      "get" : {
+        "operationId" : "get_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "token",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ManagedAppointmentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "La cita del enlace. 404 si el enlace no es válido (o es de otro negocio)",
+        "tags" : [ "public" ]
+      }
+    },
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}/availability" : {
+      "get" : {
+        "operationId" : "availability_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "token",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "staffId",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Huecos para mover la cita (mismo servicio, máx. 14 días). La propia cita no ocupa",
+        "tags" : [ "public" ]
+      }
+    },
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}/cancel" : {
+      "post" : {
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "token",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ManagedAppointmentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cancelar la cita (hasta 2 h antes). Repetirlo no hace nada",
+        "tags" : [ "public" ]
+      }
+    },
+    "/api/v1/public/businesses/{slug}/appointments/manage/{token}/reschedule" : {
+      "post" : {
+        "operationId" : "reschedule",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "slug",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "token",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RescheduleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ManagedAppointmentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cambiar la hora (hasta 2 h antes). 409 si el hueco ya no está libre",
+        "tags" : [ "public" ]
+      }
+    },
     "/api/v1/public/businesses/{slug}/availability" : {
       "get" : {
         "operationId" : "availability",
@@ -847,6 +1017,9 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "manageToken" : {
+            "type" : "string"
+          },
           "serviceName" : {
             "type" : "string"
           },
@@ -866,7 +1039,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "customerEmail", "date", "endsAt", "id", "serviceName", "staffName", "startsAt", "time", "timezone" ]
+        "required" : [ "customerEmail", "date", "endsAt", "id", "manageToken", "serviceName", "staffName", "startsAt", "time", "timezone" ]
       },
       "BusinessResponse" : {
         "type" : "object",
@@ -1002,6 +1175,69 @@
           }
         },
         "required" : [ "email", "password" ]
+      },
+      "ManagedAppointmentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changeable" : {
+            "type" : "boolean"
+          },
+          "changeableUntil" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "customerName" : {
+            "type" : "string"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "endTime" : {
+            "type" : "string",
+            "example" : "10:45",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          },
+          "endsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "serviceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "serviceName" : {
+            "type" : "string"
+          },
+          "staffId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "staffName" : {
+            "type" : "string"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW" ]
+          },
+          "time" : {
+            "type" : "string",
+            "example" : "10:15",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "changeable", "changeableUntil", "customerName", "date", "endTime", "endsAt", "id", "serviceId", "serviceName", "staffId", "staffName", "startsAt", "status", "time", "timezone" ]
       },
       "MeResponse" : {
         "type" : "object",
@@ -1156,6 +1392,20 @@
           }
         },
         "required" : [ "displayName", "id", "serviceIds" ]
+      },
+      "RescheduleRequest" : {
+        "type" : "object",
+        "properties" : {
+          "staffId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "startsAt" ]
       },
       "ServiceRequest" : {
         "type" : "object",

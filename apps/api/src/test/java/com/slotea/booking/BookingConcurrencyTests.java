@@ -112,7 +112,7 @@ class BookingConcurrencyTests {
         List<String> outcomes = race(threads, _ -> () -> {
             try {
                 TenantContext.callAs(tenant.businessId(), () -> new TransactionTemplate(transactionManager)
-                        .execute(_ -> appointments.saveAndFlush(new Appointment(ana, haircut, customer, start,
+                        .execute(_ -> appointments.saveAndFlush(new Appointment(Appointment.newId(), ana, haircut, customer, start,
                                 start.plus(Duration.ofMinutes(30)), start.plus(Duration.ofMinutes(35)),
                                 OpaqueTokens.sha256(OpaqueTokens.generate()), null, Instant.now()))));
                 return "created";
@@ -146,6 +146,29 @@ class BookingConcurrencyTests {
     }
 
     /** Lanza {@code count} tareas que arrancan a la vez y devuelve sus resultados. */
+    @Test
+    void movingSeveralAppointmentsToTheSameSlotAtOnceLetsOnlyOneThrough() throws Exception {
+        // Cuatro citas de Ana (09:00, 10:00, 11:00 y 12:00) quieren pasar a la vez a las 13:00.
+        int moves = 4;
+        List<String> tokens = new ArrayList<>();
+        for (int i = 0; i < moves; i++) {
+            tokens.add(booking.bookForToken(tenant.slug(), haircut, ana, at(day, "%02d:00".formatted(9 + i)),
+                    "mover" + i + "@example.test"));
+        }
+        Instant target = at(day, "13:00");
+
+        List<Integer> statuses = race(moves, i -> () -> booking.reschedule(tenant.slug(), tokens.get(i), target, ana)
+                .getResponse().getStatus());
+
+        assertThat(statuses).filteredOn(s -> s == 200).hasSize(1);
+        assertThat(statuses).filteredOn(s -> s == 409).hasSize(moves - 1);
+        assertThat(jdbc.sql("""
+                SELECT count(*) FROM appointment WHERE business_id = ? AND status = 'CONFIRMED' AND starts_at = ?
+                """).params(tenant.businessId(), java.sql.Timestamp.from(target)).query(Long.class).single())
+                .isEqualTo(1);
+        assertThat(confirmedAppointments()).as("ninguna se pierde: las demás siguen a su hora").isEqualTo(moves);
+    }
+
     private static <T> List<T> race(int count, IntFunction<Callable<T>> task) throws Exception {
         CountDownLatch ready = new CountDownLatch(count);
         CountDownLatch go = new CountDownLatch(1);
