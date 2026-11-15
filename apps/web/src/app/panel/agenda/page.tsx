@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { AgendaRoute } from "@/components/panel/agenda/agenda-route";
 
 export const metadata: Metadata = { title: "Agenda · Slotea" };
+// El panel se carga en el navegador (sesión en cookies httpOnly): no hay navegación instantánea que validar.
+export const instant = false;
 
 export default function Page() {
   return (

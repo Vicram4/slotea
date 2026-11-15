@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/panel/page-header";
 import { ClosuresPanel } from "@/components/panel/schedule/closures-panel";
 
 export const metadata: Metadata = { title: "Cierres · Slotea" };
+// El panel se carga en el navegador (sesión en cookies httpOnly): no hay navegación instantánea que validar.
+export const instant = false;
 
 export default function Page() {
   return (

@@ -37,6 +37,8 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Next 16 + `cacheComponents`: en rutas con parámetros sin `generateStaticParams`, `await params` va dentro de un `Suspense` (ver `app/[slug]/page.tsx`).
 - Next 16 + `cacheComponents`: `usePathname()` en un componente cliente bloquea el prerender de rutas con parámetros → envuélvelo en `Suspense` (ver `PanelShell`). `useSearchParams()` igual, en cualquier ruta (ver `AgendaRoute`).
 - Next 16 + `cacheComponents`: al navegar, la página anterior queda **oculta en el DOM** (`<Activity>`). En Playwright, busca campos con `field()` de `e2e/helpers.ts` (solo visibles) o por rol.
+- Next 16 + `cacheComponents`: cada página del panel exporta `instant = false` (se pinta tras cargar la sesión en el cliente). Una página nueva del panel lo necesita o Next avisa en desarrollo (`instant-unrendered-segment`).
+- Instalar una dependencia que Next tiene como *peer* opcional (p. ej. Playwright) cambia la carpeta de Next en pnpm: **reinicia `pnpm dev`** o la validación de Next falla con «Could not find the module …boundary.js».
 - Vitest/jsdom: Radix necesita `ResizeObserver` (stub en `vitest.setup.ts`). Para nombres accesibles de botones con icono, usa `aria-label`, no `<span class="sr-only">`.
 - MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
 - Emails: se encolan en `email_outbox` **dentro** de la transacción del cambio y se envían con `EmailOutbox.sendNow` **después** del commit (nunca en `AFTER_COMMIT` ni en segundo plano: ver `docs/fase-7-emails.md`). No reactives el health de mail.
