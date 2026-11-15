@@ -10,10 +10,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.id.uuid.UuidVersion7Strategy;
@@ -23,13 +21,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.slotea.booking.AppointmentStatus;
+import com.slotea.demo.DemoTemplate.Account;
+import com.slotea.demo.DemoTemplate.Range;
+import com.slotea.demo.DemoTemplate.Service;
+import com.slotea.demo.DemoTemplate.Staff;
 import com.slotea.shared.links.AppointmentLinks;
 
 /**
- * Crea una copia de la barbería de demostración: negocio, dueño, empleado con cuenta, catálogo,
- * horarios, un cierre, una ausencia, clientes y unas 4 semanas de citas <strong>relativas a hoy</strong>
- * (en la zona del negocio). Todo es ficticio: emails {@code @example.com} (dominio reservado) y sin
- * teléfonos.
+ * Crea una copia de la demo a partir de la {@link DemoTemplate} de un sector: negocio, dueño, empleado
+ * con cuenta (si el sector lo tiene), catálogo, horarios, un cierre, una ausencia, clientes y unas 4
+ * semanas de citas <strong>relativas a hoy</strong> (en la zona del negocio). El contenido está en
+ * {@link DemoTemplates}; aquí solo está el motor, igual para todos los sectores.
  *
  * <p>Con SQL por lotes y no con JPA: son unas 500 filas por clic y tienen que estar en menos de un
  * segundo. Las citas pasan igualmente por la restricción {@code appointment_no_overlap}: si el
@@ -41,13 +43,8 @@ import com.slotea.shared.links.AppointmentLinks;
 @Component
 class DemoSeeder {
 
-    static final String BUSINESS_NAME = "Barbería Demo Slotea";
     static final String TIMEZONE = "Europe/Madrid";
-    static final String CONTACT_EMAIL = "barberia-demo@example.com";
     static final String SLUG_PREFIX = "demo-";
-    static final String OWNER_NAME = "Dueño Demo";
-    static final String EMPLOYEE_NAME = "Empleado Demo";
-    static final String UNLINKED_NAME = "Profesional Demo";
     static final int DAYS_BACK = 14;
     static final int DAYS_AHEAD = 14;
     /** Las citas que empezaron hace menos de esto quedan casi todas sin marcar: para probar la agenda. */
@@ -63,47 +60,6 @@ class DemoSeeder {
     private static final String SLUG_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
     private static final SecureRandom SLUGS = new SecureRandom();
 
-    private record ServiceDef(String name, String description, int durationMin, int bufferMin, int priceCents) {
-    }
-
-    private static final List<ServiceDef> SERVICES = List.of(
-            new ServiceDef("Corte de pelo", "Lavado, corte y peinado.", 30, 0, 1500),
-            new ServiceDef("Arreglo de barba", "Perfilado con navaja y toalla caliente.", 20, 0, 1000),
-            new ServiceDef("Corte y barba", "El corte de pelo y el arreglo de barba en una sola cita.", 45, 5, 2200),
-            new ServiceDef("Corte infantil", "Para menores de 12 años.", 20, 0, 1000));
-
-    /** Quién es cada profesional, qué servicios hace (índices de {@link #SERVICES}) y qué días trabaja. */
-    private enum Account { OWNER, EMPLOYEE, NONE }
-
-    private record StaffDef(String name, Account account, List<Integer> services, Set<DayOfWeek> days) {
-    }
-
-    private static final Set<DayOfWeek> MON_TO_SAT = EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.SATURDAY);
-    private static final List<StaffDef> STAFF = List.of(
-            new StaffDef(OWNER_NAME, Account.OWNER, List.of(0, 1, 2, 3), MON_TO_SAT),
-            new StaffDef(EMPLOYEE_NAME, Account.EMPLOYEE, List.of(0, 1, 2), MON_TO_SAT),
-            new StaffDef(UNLINKED_NAME, Account.NONE, List.of(0, 1, 3), EnumSet.range(DayOfWeek.TUESDAY, DayOfWeek.SATURDAY)));
-
-    private record Range(LocalTime start, LocalTime end) {
-    }
-
-    /** Jornada partida entre semana; el sábado, solo por la mañana. El domingo cierra. */
-    private static List<Range> hours(DayOfWeek day) {
-        if (day == DayOfWeek.SATURDAY) {
-            return List.of(new Range(LocalTime.of(10, 0), LocalTime.of(14, 0)));
-        }
-        return List.of(new Range(LocalTime.of(9, 30), LocalTime.of(14, 0)),
-                new Range(LocalTime.of(16, 30), LocalTime.of(20, 0)));
-    }
-
-    /** Nombres claramente inventados (todos se apellidan «Ejemplo» o «Prueba»). */
-    private static final List<String> FIRST_NAMES = List.of(
-            "Lucía", "Mario", "Sofía", "Hugo", "Martina", "Pablo", "Julia", "Daniel", "Paula", "Álvaro",
-            "Carmen", "Diego", "Elena", "Javier", "Irene", "Sergio", "Laura", "Adrián", "Marta", "Raúl",
-            "Nerea", "Iván", "Clara", "Óscar");
-    private static final List<String> NOTES = List.of(
-            "Primera visita.", "Prefiere degradado bajo.", "Viene con su hijo.", "Pregunta por productos para la barba.");
-
     private final JdbcTemplate jdbc;
     private final AppointmentLinks links;
 
@@ -112,12 +68,15 @@ class DemoSeeder {
         this.links = links;
     }
 
-    /** Lo que necesita quien crea la copia para abrir sesión en ella. */
-    record SeededDemo(UUID businessId, String slug, UUID ownerUserId, UUID employeeUserId) {
+    /**
+     * Lo que necesita quien crea la copia para abrir sesión en ella. {@code employeeUserId} es
+     * {@code null} en un sector sin empleado con cuenta (psicología).
+     */
+    record SeededDemo(UUID businessId, String slug, UUID ownerUserId, @Nullable UUID employeeUserId) {
     }
 
     /** Dentro de una transacción (obligatoria): o se crea la copia entera o nada. */
-    SeededDemo seed(Instant now) {
+    SeededDemo seed(DemoTemplate template, Instant now) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("The demo must be seeded in a single transaction");
         }
@@ -127,22 +86,31 @@ class DemoSeeder {
         String suffix = randomSuffix();
         String slug = SLUG_PREFIX + suffix;
         OffsetDateTime created = utc(now);
+        List<Service> services = template.services();
+        List<Staff> staff = template.staff();
 
         UUID businessId = newId();
         jdbc.update("""
                 INSERT INTO business (id, slug, name, timezone, contact_email, is_demo, created_at)
-                VALUES (?, ?, ?, ?, ?, true, ?)""", businessId, slug, BUSINESS_NAME, TIMEZONE, CONTACT_EMAIL, created);
+                VALUES (?, ?, ?, ?, ?, true, ?)""", businessId, slug, template.businessName(), TIMEZONE,
+                template.contactEmail(), created);
 
         // Usuarios: un email único por copia (app_user.email es único en toda la plataforma).
-        UUID ownerUserId = insertUser("dueno-" + suffix + "@example.com", OWNER_NAME, created);
-        UUID employeeUserId = insertUser("empleado-" + suffix + "@example.com", EMPLOYEE_NAME, created);
+        UUID ownerUserId = insertUser("dueno-" + suffix + "@example.com", template.owner().name(), created);
+        List<Object[]> memberships = new ArrayList<>();
+        memberships.add(new Object[] {newId(), businessId, ownerUserId, "OWNER", created});
+        UUID employeeUserId = null;
+        if (template.employee().isPresent()) {
+            employeeUserId = insertUser("empleado-" + suffix + "@example.com", template.employee().get().name(),
+                    created);
+            memberships.add(new Object[] {newId(), businessId, employeeUserId, "STAFF", created});
+        }
         jdbc.batchUpdate("INSERT INTO membership (id, business_id, user_id, role, created_at) VALUES (?, ?, ?, ?, ?)",
-                List.of(new Object[] {newId(), businessId, ownerUserId, "OWNER", created},
-                        new Object[] {newId(), businessId, employeeUserId, "STAFF", created}));
+                memberships);
 
         List<UUID> serviceIds = new ArrayList<>();
         List<Object[]> serviceRows = new ArrayList<>();
-        for (ServiceDef s : SERVICES) {
+        for (Service s : services) {
             UUID id = newId();
             serviceIds.add(id);
             serviceRows.add(new Object[] {id, businessId, s.name(), s.description(), s.durationMin(), s.bufferMin(),
@@ -156,7 +124,7 @@ class DemoSeeder {
         List<Object[]> staffRows = new ArrayList<>();
         List<Object[]> staffServiceRows = new ArrayList<>();
         List<Object[]> hourRows = new ArrayList<>();
-        for (StaffDef s : STAFF) {
+        for (Staff s : staff) {
             UUID id = newId();
             staffIds.add(id);
             UUID userId = switch (s.account()) {
@@ -167,7 +135,7 @@ class DemoSeeder {
             staffRows.add(new Object[] {id, businessId, userId, s.name(), created});
             s.services().forEach(i -> staffServiceRows.add(new Object[] {businessId, id, serviceIds.get(i)}));
             for (DayOfWeek day : s.days()) {
-                for (Range range : hours(day)) {
+                for (Range range : s.hoursOn(day)) {
                     hourRows.add(new Object[] {newId(), businessId, id, day.getValue(), range.start(), range.end()});
                 }
             }
@@ -181,22 +149,27 @@ class DemoSeeder {
                 INSERT INTO working_hours (id, business_id, staff_id, day_of_week, start_time, end_time)
                 VALUES (?, ?, ?, ?, ?, ?)""", hourRows);
 
-        // Un festivo del negocio dentro de una semana y unos días libres del empleado (los gestiona él mismo).
+        // Un festivo del negocio dentro de una semana y, si hay empleado, unos días libres suyos (los
+        // gestiona él mismo desde su vista).
         LocalDate holiday = nextWeekday(today.plusDays(8));
         LocalDate vacationStart = nextWeekday(today.plusDays(3));
         LocalDate vacationEnd = vacationStart.plusDays(1);
-        UUID employeeStaffId = staffIds.get(1);
+        int employeeIndex = template.employee().map(staff::indexOf).orElse(-1);
+        List<Object[]> closures = new ArrayList<>();
+        closures.add(new Object[] {newId(), businessId, null, holiday, holiday, "Festivo local", created});
+        if (employeeIndex >= 0) {
+            closures.add(new Object[] {newId(), businessId, staffIds.get(employeeIndex), vacationStart, vacationEnd,
+                    "Vacaciones", created});
+        }
         jdbc.batchUpdate("""
                 INSERT INTO closure (id, business_id, staff_id, start_date, end_date, reason, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                List.of(new Object[] {newId(), businessId, null, holiday, holiday, "Festivo local", created},
-                        new Object[] {newId(), businessId, employeeStaffId, vacationStart, vacationEnd, "Vacaciones",
-                                created}));
+                VALUES (?, ?, ?, ?, ?, ?, ?)""", closures);
 
         List<UUID> customerIds = new ArrayList<>();
         List<Object[]> customerRows = new ArrayList<>();
-        for (int i = 0; i < FIRST_NAMES.size(); i++) {
-            String first = FIRST_NAMES.get(i);
+        List<String> firstNames = template.customerFirstNames();
+        for (int i = 0; i < firstNames.size(); i++) {
+            String first = firstNames.get(i);
             String last = i % 2 == 0 ? "Ejemplo" : "Prueba";
             UUID id = newId();
             customerIds.add(id);
@@ -207,30 +180,31 @@ class DemoSeeder {
                 customerRows);
 
         List<Object[]> appointments = new ArrayList<>();
-        for (int s = 0; s < STAFF.size(); s++) {
-            StaffDef def = STAFF.get(s);
+        for (int s = 0; s < staff.size(); s++) {
+            Staff def = staff.get(s);
             List<Object[]> own = new ArrayList<>();
             for (LocalDate day = today.minusDays(DAYS_BACK); !day.isAfter(today.plusDays(DAYS_AHEAD)); day = day.plusDays(1)) {
-                boolean absent = s == 1 && !day.isBefore(vacationStart) && !day.isAfter(vacationEnd);
+                boolean absent = s == employeeIndex && !day.isBefore(vacationStart) && !day.isAfter(vacationEnd);
                 if (!def.days().contains(day.getDayOfWeek()) || day.equals(holiday) || absent) {
                     continue;
                 }
-                for (Range range : hours(day.getDayOfWeek())) {
+                for (Range range : def.hoursOn(day.getDayOfWeek())) {
                     LocalTime t = range.start();
                     while (true) {
-                        ServiceDef service = SERVICES.get(def.services().get(random.nextInt(def.services().size())));
+                        int serviceIndex = def.services().get(random.nextInt(def.services().size()));
+                        Service service = services.get(serviceIndex);
                         LocalTime end = t.plusMinutes(service.durationMin());
                         LocalTime blocked = end.plusMinutes(service.bufferMin());
                         if (blocked.isAfter(range.end()) || blocked.isBefore(t)) {
                             break;
                         }
                         if (random.nextDouble() < occupancy(today, day)) {
-                            own.add(appointment(random, now, zone, businessId, staffIds.get(s),
-                                    serviceIds.get(SERVICES.indexOf(service)),
-                                    customerIds.get(random.nextInt(customerIds.size())), day, t, end, blocked));
+                            own.add(appointment(random, template, now, zone, businessId, staffIds.get(s),
+                                    serviceIds.get(serviceIndex), customerIds.get(random.nextInt(customerIds.size())),
+                                    day, t, end, blocked));
                             t = roundUpToQuarter(blocked);
                         } else {
-                            t = t.plusMinutes(30);
+                            t = t.plusMinutes(template.slotStepMin());
                         }
                     }
                 }
@@ -262,7 +236,7 @@ class DemoSeeder {
     private static final int STATUS = 8;
     private static final int CANCELLED_AT = 12;
 
-    private Object[] appointment(Random random, Instant now, ZoneId zone, UUID businessId, UUID staffId,
+    private Object[] appointment(Random random, DemoTemplate template, Instant now, ZoneId zone, UUID businessId, UUID staffId,
             UUID serviceId, UUID customerId, LocalDate day, LocalTime start, LocalTime end, LocalTime blocked) {
         Instant startsAt = day.atTime(start).atZone(zone).toInstant();
         Instant endsAt = day.atTime(end).atZone(zone).toInstant();
@@ -279,7 +253,8 @@ class DemoSeeder {
             long window = Math.max(1, Duration.between(createdAt, limit).toMinutes());
             cancelledAt = createdAt.plus(Duration.ofMinutes((long) (random.nextDouble() * window)));
         }
-        String notes = random.nextInt(10) == 0 ? NOTES.get(random.nextInt(NOTES.size())) : null;
+        List<String> templateNotes = template.notes();
+        String notes = random.nextInt(10) == 0 ? templateNotes.get(random.nextInt(templateNotes.size())) : null;
         UUID id = newId();
         return new Object[] {id, businessId, staffId, serviceId, customerId, utc(startsAt), utc(endsAt),
                 utc(blockedUntil), status.name(), links.tokenHash(id), notes, utc(createdAt), utcOrNull(cancelledAt)};

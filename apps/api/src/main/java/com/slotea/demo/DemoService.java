@@ -60,7 +60,7 @@ class DemoService {
                 throw ApiException.serviceUnavailable("La demo está llena ahora mismo. Prueba de nuevo en un rato.");
             }
         }
-        SeededDemo demo = tx.execute(_ -> seeder.seed(clock.instant()));
+        SeededDemo demo = tx.execute(_ -> seeder.seed(DemoTemplates.BARBERSHOP, clock.instant()));
         log.info("Demo copy {} created", demo.slug());
         return auth.demoSession(role == DemoRole.OWNER ? demo.ownerUserId() : demo.employeeUserId(),
                 demo.businessId());

@@ -55,7 +55,7 @@ class DemoSeederTests {
             "2027-03-26T18:00:00Z"}) // y el de primavera (28 de marzo)
     void theAgendaIsBelievableAtAnyTime(String instant) {
         Instant now = Instant.parse(instant);
-        demo = new TransactionTemplate(transactionManager).execute(_ -> seeder.seed(now));
+        demo = new TransactionTemplate(transactionManager).execute(_ -> seeder.seed(DemoTemplates.BARBERSHOP, now));
 
         assertThat(count("SELECT count(*) FROM appointment WHERE business_id = ?")).isBetween(150L, 600L);
         assertThat(count("SELECT count(*) FROM staff_member WHERE business_id = ?")).isEqualTo(3);
