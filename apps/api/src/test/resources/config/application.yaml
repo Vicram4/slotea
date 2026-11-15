@@ -3,3 +3,9 @@ app:
   auth:
     # Clave SOLO para tests (no es un secreto: nunca se usa fuera de ellos).
     jwt-secret: dGVzdC1vbmx5LWp3dC1zZWNyZXQtbm90LXVzZWQtaW4tcHJvZHVjdGlvbiE=
+  links:
+    # Clave SOLO para tests.
+    secret: dGVzdC1vbmx5LWxpbmstc2VjcmV0LW5vdC11c2VkLWluLXByb2R1Y3Rpb24hIQ==
+    web-url: https://web.example.test
+  jobs:
+    token: test-only-jobs-token-not-a-real-secret

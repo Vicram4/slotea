@@ -1,0 +1,21 @@
+[# th:switch="${type}"][# th:case="'BOOKING_CONFIRMED'"]Tu cita está confirmada[/][# th:case="'BOOKING_RESCHEDULED'"]Hemos cambiado tu cita[/][# th:case="*"]Tu cita está cancelada[/][/] · [(${businessName})]
+
+Hola, [(${customerName})]:
+
+[# th:switch="${type}"][# th:case="'BOOKING_CONFIRMED'"]Estos son los datos de tu reserva.[/][# th:case="'BOOKING_RESCHEDULED'"]Tu cita tiene una nueva hora. Estos son los datos actualizados.[/][# th:case="*"]Hemos cancelado esta cita. El hueco queda libre para otra persona.[/][/]
+
+Servicio:    [(${serviceName})]
+Profesional: [(${staffName})]
+Día:         [(${date})]
+Hora:        [(${time})] – [(${endTime})][# th:if="${previousDate != null}"]
+Antes:       [(${previousDate})], [(${previousTime})][/]
+
+[# th:if="${type != 'BOOKING_CANCELLED'}"]Ver, cambiar o cancelar la cita:
+[(${manageUrl})]
+
+Guarda este email: el enlace es tu acceso a la cita, sin contraseña. No lo reenvíes.[/][# th:if="${type == 'BOOKING_CANCELLED'}"]Reservar otra cita:
+[(${bookingUrl})][/]
+
+--
+Te escribimos en nombre de [(${businessName})]. Si respondes a este email, le llegará a [(${businessName})].
+Enviado con Slotea.

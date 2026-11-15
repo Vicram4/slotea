@@ -11,6 +11,14 @@ spring:
       idle-timeout: 60000 # 1 min
       max-lifetime: 240000 # 4 min
       connection-timeout: 15000 # 15 s: el primer acceso despierta a Neon y tarda unos segundos
+  # Brevo SMTP. MAIL_USERNAME y MAIL_PASSWORD (la clave SMTP) llegan desde Secret Manager.
+  mail:
+    host: ${MAIL_HOST:smtp-relay.brevo.com}
+    port: ${MAIL_PORT:587}
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.starttls.enable]": true
+      "[mail.smtp.starttls.required]": true
 
 server:
   # La petición llega por Vercel y el balanceador de Cloud Run: respetamos X-Forwarded-*.
@@ -21,3 +29,10 @@ management:
   endpoint:
     health:
       show-details: never
+
+app:
+  links:
+    web-url: ${APP_WEB_URL:https://slotea.vercel.app}
+  mail:
+    # Sin valor por defecto: si falta, MailSettings impide arrancar (mejor que emails rechazados).
+    from: ${MAIL_FROM}

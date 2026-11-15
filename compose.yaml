@@ -22,6 +22,10 @@ services:
   # Bandeja de correo falsa: captura los emails que envía la API. Interfaz en http://localhost:8025
   mailpit:
     image: axllent/mailpit:v1.33.1
+    environment:
+      # Sin esto, Mailpit busca el DNS inverso del cliente antes de saludar: tras el port-forward de
+      # Docker tarda ~10 s y la API (timeout de 5 s) da el envío por fallido.
+      MP_SMTP_DISABLE_RDNS: "true"
     ports:
       - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
       - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
