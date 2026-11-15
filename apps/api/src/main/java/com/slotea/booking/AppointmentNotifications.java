@@ -18,8 +18,8 @@ import com.slotea.notification.EmailType;
  * Los emails de un cambio en una cita: el del cliente y, si el cambio lo ha hecho el cliente, el
  * aviso al negocio (a su email de contacto). Ambos con los mismos datos y en la misma transacción.
  *
- * <p>Los negocios de demostración ({@code is_demo}) no reciben avisos: su email de contacto es
- * ficticio y cada rebote perjudica la reputación del remitente.
+ * <p>En los negocios de demostración ({@code is_demo}) se encolan igual, pero no se envían nunca: se
+ * ven en la bandeja de la demo (ver {@code EmailOutbox#enqueue}).
  */
 @Component
 class AppointmentNotifications {
@@ -46,7 +46,7 @@ class AppointmentNotifications {
                 customer.phone());
         List<UUID> ids = new ArrayList<>(2);
         ids.add(outbox.enqueue(change.toCustomer(), customer.email(), email));
-        if (change.toBusiness() != null && !business.isDemo()) {
+        if (change.toBusiness() != null) {
             ids.add(outbox.enqueue(change.toBusiness(), business.getContactEmail(), email));
         }
         return ids;

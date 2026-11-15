@@ -46,18 +46,27 @@ public class EmailOutbox {
         this.clock = clock;
     }
 
-    /** Guarda el email en la transacción actual (obligatoria) y devuelve su id, para {@link #sendNow}. */
+    /**
+     * Guarda el email en la transacción actual (obligatoria) y devuelve su id, para {@link #sendNow}.
+     *
+     * <p>Si el negocio es de demostración, queda como {@code DEMO}: no se envía nunca (ni ahora ni en
+     * el job), solo se ve en la bandeja de la demo. Lo decide la propia sentencia, así que ningún
+     * camino del código puede olvidarse de comprobarlo.
+     */
     public UUID enqueue(EmailType type, String to, AppointmentEmail email) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("Emails must be queued in the transaction that changes the data");
         }
         UUID id = UuidVersion7Strategy.INSTANCE.generateUuid(null);
         jdbc.sql("""
-                INSERT INTO email_outbox (id, business_id, appointment_id, type, to_email, payload, next_attempt_at)
-                VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
+                INSERT INTO email_outbox (id, business_id, appointment_id, type, to_email, payload, next_attempt_at,
+                                          status)
+                SELECT ?, b.id, ?, ?, ?, CAST(? AS jsonb), ?,
+                       CASE WHEN b.is_demo THEN 'DEMO' ELSE 'PENDING' END
+                FROM business b WHERE b.id = ?
                 """)
-                .params(id, TenantContext.requireBusinessId(), email.appointmentId(), type.name(), to,
-                        json.writeValueAsString(email), OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
+                .params(id, email.appointmentId(), type.name(), to, json.writeValueAsString(email),
+                        OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC), TenantContext.requireBusinessId())
                 .update();
         return id;
     }

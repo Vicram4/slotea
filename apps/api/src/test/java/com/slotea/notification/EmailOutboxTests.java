@@ -134,6 +134,20 @@ class EmailOutboxTests {
     }
 
     @Test
+    void demoBusinessesNeverSendEmails() {
+        jdbc.sql("UPDATE business SET is_demo = true WHERE id = ?").param(tenant.businessId()).update();
+        String to = uniqueAddress();
+        UUID id = inTenantTransaction(() -> outbox.enqueue(EmailType.BOOKING_CONFIRMED, to, sample()));
+
+        outbox.sendNow(id);
+        assertThat(mvc.post().uri("/internal/jobs/outbox").header("X-Jobs-Token", JOBS_TOKEN)).hasStatus(HttpStatus.OK);
+
+        assertThat(rowsTo(to)).singleElement().satisfies(row ->
+                assertThat(row).containsEntry("status", "DEMO").containsEntry("attempts", 0));
+        assertThat(mailpit.to(to)).isEmpty();
+    }
+
+    @Test
     void twoJobRunsAtTheSameTimeSendEachEmailOnce() throws Exception {
         List<String> addresses = new ArrayList<>();
         for (int i = 0; i < 12; i++) {

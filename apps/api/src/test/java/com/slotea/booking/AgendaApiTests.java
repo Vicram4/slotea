@@ -299,17 +299,18 @@ class AgendaApiTests {
     }
 
     @Test
-    void demoBusinessesGetNoNotices() {
+    void demoBusinessesQueueEveryEmailButSendNone() {
         jdbc.sql("UPDATE business SET is_demo = true WHERE id = ?").param(tenant.businessId()).update();
         String customer = AuthApi.unique("demo") + "@example.test";
         booking.bookForToken(tenant.slug(), haircut, ana, at(day, "11:00"), customer);
 
-        mailpit.awaitOne(customer); // el cliente sí recibe su confirmación
-        long notices = jdbc.sql("""
-                SELECT count(*) FROM email_outbox WHERE business_id = ? AND type LIKE 'BUSINESS_%'
-                  AND payload ->> 'customerEmail' = ?""")
-                .params(tenant.businessId(), customer).query(Long.class).single();
-        assertThat(notices).isZero();
+        // Los dos (cliente y aviso al negocio) quedan en la bandeja de la demo, ninguno se envía.
+        var statuses = jdbc.sql("""
+                SELECT type || ':' || status FROM email_outbox
+                WHERE business_id = ? AND payload ->> 'customerEmail' = ? ORDER BY type""")
+                .params(tenant.businessId(), customer).query(String.class).list();
+        assertThat(statuses).containsExactly("BOOKING_CONFIRMED:DEMO", "BUSINESS_NEW_BOOKING:DEMO");
+        assertThat(mailpit.to(customer)).isEmpty();
     }
 
     // --- Utilidades ------------------------------------------------------------------------------
