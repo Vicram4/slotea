@@ -87,4 +87,18 @@ describe("DemoLauncher", () => {
     expect(screen.getByRole("button", { name: /Entrar como empleado/ })).toBeEnabled();
     expect(router.push).not.toHaveBeenCalled();
   });
+
+  it("explains when there have been too many demos in a row", async () => {
+    const detail = "Demasiadas peticiones seguidas. Espera un momento y vuelve a intentarlo.";
+    server.use(
+      http.post("/api/v1/demo/sessions", () =>
+        HttpResponse.json({ status: 429, detail }, { status: 429, headers: { "Retry-After": "180" } }),
+      ),
+    );
+    renderWithQuery(<DemoLauncher />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Entrar como negocio/ }));
+
+    expect(await screen.findByText(detail)).toBeInTheDocument();
+  });
 });

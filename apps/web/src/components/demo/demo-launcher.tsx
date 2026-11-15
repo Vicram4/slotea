@@ -105,6 +105,9 @@ export function DemoLauncher({ wakeUpAfterMs = WAKE_UP_AFTER_MS }: { wakeUpAfter
 }
 
 function errorMessage(error: Error): string {
-  if (error instanceof ApiError && error.status === 503 && error.problem.detail) return error.problem.detail;
+  // 503: la demo está llena; 429: demasiadas copias seguidas. La API explica cuál.
+  if (error instanceof ApiError && [429, 503].includes(error.status) && error.problem.detail) {
+    return error.problem.detail;
+  }
   return "No se pudo abrir la demo. Inténtalo de nuevo en unos segundos.";
 }
