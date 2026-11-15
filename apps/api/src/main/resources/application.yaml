@@ -64,6 +64,9 @@ app:
   jobs:
     # Token del cron que llama a /internal/jobs/* (≥ 32 caracteres). Vacío = esos endpoints dan 401.
     token: ${JOBS_TOKEN:}
+  rate-limit:
+    # Límite de peticiones por IP y global (RateLimiter). Solo se apaga en los tests.
+    enabled: true
 
 springdoc:
   # Orden estable: el OpenAPI se guarda como contrato (apps/web/openapi.json) y se compara en CI.

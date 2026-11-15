@@ -16,6 +16,7 @@
 	<properties>
 		<java.version>25</java.version>
 		<springdoc.version>3.2.0</springdoc.version>
+		<bucket4j.version>8.22.0</bucket4j.version>
 		<openapi.update>false</openapi.update>
 	</properties>
 	<dependencies>
@@ -55,6 +56,12 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+		<dependency>
+			<!-- Límite de peticiones en memoria (una sola instancia: max-instances=1). -->
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j_jdk17-core</artifactId>
+			<version>${bucket4j.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>

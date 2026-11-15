@@ -9,3 +9,6 @@ app:
     web-url: https://web.example.test
   jobs:
     token: test-only-jobs-token-not-a-real-secret
+  rate-limit:
+    # Todas las peticiones de los tests salen de la misma IP: el límite se prueba aparte (RateLimitTests).
+    enabled: false
