@@ -12,6 +12,7 @@ import com.slotea.auth.AuthCookies;
 import com.slotea.auth.AuthDtos.MeResponse;
 import com.slotea.auth.AuthService.Session;
 import com.slotea.demo.DemoDtos.DemoSessionRequest;
+import com.slotea.demo.DemoDtos.DemoSwitchRequest;
 import com.slotea.shared.tenancy.TenantContext;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,19 +34,22 @@ class DemoController {
         this.cookies = cookies;
     }
 
-    /** Público (sin sesión), pero con CSRF como cualquier POST. 503 si hay demasiadas copias vivas. */
+    /**
+     * Público (sin sesión), pero con CSRF como cualquier POST. 400 si se pide entrar como empleado en un
+     * sector que no lo tiene; 503 si hay demasiadas copias vivas.
+     */
     @Operation(summary = "Crear una copia de la demo y entrar en ella")
     @PostMapping("/sessions")
     @ResponseStatus(HttpStatus.CREATED)
     MeResponse create(@Valid @RequestBody DemoSessionRequest request, HttpServletResponse response) {
-        return open(demo.create(request.role()), response);
+        return open(demo.create(request.sector(), request.role()), response);
     }
 
     /** Solo dentro de una copia de la demo (404 en un negocio real). */
     @Operation(summary = "Cambiar de dueño a empleado (o al revés) en la misma copia de la demo")
     @PostMapping("/switch")
     @PreAuthorize("hasRole('STAFF')")
-    MeResponse switchRole(@Valid @RequestBody DemoSessionRequest request, HttpServletResponse response) {
+    MeResponse switchRole(@Valid @RequestBody DemoSwitchRequest request, HttpServletResponse response) {
         return open(demo.switchTo(TenantContext.requireBusinessId(), request.role()), response);
     }
 

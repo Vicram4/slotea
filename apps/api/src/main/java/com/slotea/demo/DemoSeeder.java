@@ -209,7 +209,7 @@ class DemoSeeder {
                     }
                 }
             }
-            if (def.account() == Account.EMPLOYEE) {
+            if (def.account() != Account.NONE) {
                 leaveOneUnmarked(own, now);
             }
             appointments.addAll(own);
@@ -279,8 +279,9 @@ class DemoSeeder {
     }
 
     /**
-     * Garantiza que el empleado tiene al menos una cita empezada sin marcar (con su vista se prueba
-     * «Marcar completada / no presentada»), sea cual sea la hora a la que se crea la copia.
+     * Garantiza que cada profesional con cuenta (dueño y empleado) tiene al menos una cita empezada sin
+     * marcar (con su vista se prueba «Marcar completada / no presentada»), sea cual sea la hora a la que
+     * se crea la copia. En psicología, la única profesional es la dueña.
      */
     private static void leaveOneUnmarked(List<Object[]> rows, Instant now) {
         boolean hasOne = rows.stream().anyMatch(r -> startedAt(r).isBefore(now)

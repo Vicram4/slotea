@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.slotea.auth.AuthService;
 import com.slotea.auth.AuthService.Session;
 import com.slotea.demo.DemoDtos.DemoRole;
+import com.slotea.demo.DemoDtos.DemoSector;
 import com.slotea.demo.DemoSeeder.SeededDemo;
 import com.slotea.shared.web.ApiException;
 
@@ -51,8 +53,12 @@ class DemoService {
         this.clock = clock;
     }
 
-    /** Crea una copia y abre sesión en ella como dueño o como empleado. */
-    Session create(DemoRole role) {
+    /** Crea una copia del sector y abre sesión en ella como dueño o como empleado. */
+    Session create(DemoSector sector, DemoRole role) {
+        DemoTemplate template = DemoTemplates.of(sector);
+        if (role == DemoRole.STAFF && template.employee().isEmpty()) {
+            throw ApiException.badRequest("En esta demo solo hay una profesional: entra como negocio o como cliente.");
+        }
         if (liveCopies() >= MAX_LIVE_COPIES) {
             // Si el cron de limpieza no ha pasado, limpiamos aquí antes de rendirnos.
             deleteExpired();
@@ -60,10 +66,10 @@ class DemoService {
                 throw ApiException.serviceUnavailable("La demo está llena ahora mismo. Prueba de nuevo en un rato.");
             }
         }
-        SeededDemo demo = tx.execute(_ -> seeder.seed(DemoTemplates.BARBERSHOP, clock.instant()));
-        log.info("Demo copy {} created", demo.slug());
-        return auth.demoSession(role == DemoRole.OWNER ? demo.ownerUserId() : demo.employeeUserId(),
-                demo.businessId());
+        SeededDemo demo = tx.execute(_ -> seeder.seed(template, clock.instant()));
+        log.info("Demo copy {} created ({})", demo.slug(), sector);
+        UUID userId = role == DemoRole.OWNER ? demo.ownerUserId() : demo.employeeUserId();
+        return auth.demoSession(Objects.requireNonNull(userId), demo.businessId());
     }
 
     /** Pasa de dueño a empleado (o al revés) dentro de la misma copia. */

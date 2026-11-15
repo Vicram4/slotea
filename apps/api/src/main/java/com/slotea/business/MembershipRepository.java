@@ -24,7 +24,10 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
      * {@link com.slotea.shared.tenancy.SystemTransactions} (con un tenant normal devolvería como mucho uno).
      */
     @Query("""
-            select new com.slotea.business.MembershipSummary(b.id, b.slug, b.name, m.role, b.demo)
+            select new com.slotea.business.MembershipSummary(b.id, b.slug, b.name, m.role, b.demo,
+                case when b.demo and exists (select 1 from Membership o
+                                             where o.businessId = m.businessId and o.role <> m.role)
+                     then true else false end)
             from Membership m join Business b on b.id = m.businessId
             where m.user.id = :userId
             order by m.createdAt, m.id

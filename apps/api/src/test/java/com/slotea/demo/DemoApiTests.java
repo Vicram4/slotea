@@ -14,6 +14,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -27,6 +29,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import com.jayway.jsonpath.JsonPath;
 import com.slotea.TestcontainersConfiguration;
+import com.slotea.demo.DemoDtos.DemoSector;
 import com.slotea.support.AuthApi;
 import com.slotea.support.AuthApi.Session;
 import com.slotea.support.BookingApi;
@@ -78,6 +81,7 @@ class DemoApiTests {
         assertThat(demo.slug()).matches("demo-[a-z0-9]{8}");
         assertThat((String) JsonPath.read(demo.body(), "$.activeBusiness.role")).isEqualTo("OWNER");
         assertThat((Boolean) JsonPath.read(demo.body(), "$.activeBusiness.demo")).isTrue();
+        assertThat((Boolean) JsonPath.read(demo.body(), "$.activeBusiness.demoCanSwitch")).isTrue();
         assertThat((String) JsonPath.read(demo.body(), "$.activeBusiness.name")).isEqualTo(DemoTemplates.BARBERSHOP.businessName());
         assertThat((String) JsonPath.read(demo.body(), "$.user.fullName")).isEqualTo(DemoTemplates.OWNER_NAME);
 
@@ -90,6 +94,37 @@ class DemoApiTests {
         assertThat(pending).isNotEmpty();
         List<Object> upcoming = JsonPath.read(agenda, "$.appointments[?(@.canCancel)]");
         assertThat(upcoming).isNotEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(DemoSector.class)
+    void everySectorOpensItsOwnBusiness(DemoSector sector) {
+        DemoTemplate template = DemoTemplates.of(sector);
+        Demo demo = create(sector, "OWNER");
+
+        assertThat((String) JsonPath.read(demo.body(), "$.activeBusiness.name")).isEqualTo(template.businessName());
+        assertThat((Boolean) JsonPath.read(demo.body(), "$.activeBusiness.demoCanSwitch"))
+                .isEqualTo(template.employee().isPresent());
+        String agenda = AuthApi.body(agenda(demo.session()));
+        List<String> staff = JsonPath.read(agenda, "$.staff[*].displayName");
+        assertThat(staff).hasSize(template.staff().size());
+        // El dueño (que en psicología es la única profesional) tiene algo que marcar.
+        List<Object> pending = JsonPath.read(agenda, "$.appointments[?(@.status == 'CONFIRMED' && @.canRecordOutcome)]");
+        assertThat(pending).isNotEmpty();
+        // Y su página pública deja reservar.
+        bookFirstFreeSlot(demo.slug(), AuthApi.unique(sector.name().toLowerCase()) + "@example.test");
+    }
+
+    @Test
+    void aSectorWithoutEmployeeHasNoStaffEntry() {
+        MvcTestResult result = createResult(DemoSector.PSYCHOLOGY, "STAFF");
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(AuthApi.body(result)).contains("solo hay una profesional");
+
+        // Tampoco se puede cambiar a empleado desde dentro: no hay cuenta a la que cambiar.
+        Demo demo = create(DemoSector.PSYCHOLOGY, "OWNER");
+        assertThat(catalog.send(demo.session(), "POST", "/api/v1/demo/switch", """
+                {"role": "STAFF"}""")).hasStatus(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -132,6 +167,8 @@ class DemoApiTests {
         assertThat(catalog.send(tenant.owner(), "POST", "/api/v1/demo/switch", """
                 {"role": "STAFF"}""")).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(catalog.send(tenant.owner(), "GET", "/api/v1/demo/inbox", null)).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat((Boolean) JsonPath.read(AuthApi.body(catalog.send(tenant.owner(), "GET", "/api/v1/me", null)), "$.activeBusiness.demoCanSwitch"))
+                .isFalse();
     }
 
     @Test
@@ -139,9 +176,14 @@ class DemoApiTests {
         assertThat(mvc.post().uri("/api/v1/demo/switch").with(spaCsrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"role\": \"STAFF\"}")).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(mvc.post().uri("/api/v1/demo/sessions").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\": \"OWNER\"}")).hasStatus(HttpStatus.FORBIDDEN);
+                .content("{\"sector\": \"BARBERSHOP\", \"role\": \"OWNER\"}")).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(mvc.post().uri("/api/v1/demo/sessions").with(spaCsrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\": \"CUSTOMER\"}")).hasStatus(HttpStatus.BAD_REQUEST);
+                .content("{\"sector\": \"BARBERSHOP\", \"role\": \"CUSTOMER\"}")).hasStatus(HttpStatus.BAD_REQUEST);
+        // El sector es obligatorio y tiene que ser uno de los que hay.
+        assertThat(mvc.post().uri("/api/v1/demo/sessions").with(spaCsrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\": \"OWNER\"}")).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(mvc.post().uri("/api/v1/demo/sessions").with(spaCsrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sector\": \"DENTIST\", \"role\": \"OWNER\"}")).hasStatus(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -248,8 +290,7 @@ class DemoApiTests {
                         .params(id, "filler-" + id.toString().substring(0, 13))
                         .update();
             }
-            MvcTestResult result = mvc.post().uri("/api/v1/demo/sessions").with(spaCsrf())
-                    .contentType(MediaType.APPLICATION_JSON).content("{\"role\": \"OWNER\"}").exchange();
+            MvcTestResult result = createResult(DemoSector.BARBERSHOP, "OWNER");
             assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
             assertThat(AuthApi.body(result)).contains("La demo está llena");
         } finally {
@@ -260,12 +301,20 @@ class DemoApiTests {
     // --- Utilidades ------------------------------------------------------------------------------
 
     private Demo create(String role) {
-        MvcTestResult result = mvc.post().uri("/api/v1/demo/sessions").with(spaCsrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"role\": \"" + role + "\"}").exchange();
+        return create(DemoSector.BARBERSHOP, role);
+    }
+
+    private Demo create(DemoSector sector, String role) {
+        MvcTestResult result = createResult(sector, role);
         assertThat(result).hasStatus(HttpStatus.CREATED);
         String body = AuthApi.body(result);
         return new Demo(UUID.fromString(JsonPath.read(body, "$.activeBusiness.businessId")),
                 JsonPath.read(body, "$.activeBusiness.slug"), AuthApi.sessionOf(result), body);
+    }
+
+    private MvcTestResult createResult(DemoSector sector, String role) {
+        return mvc.post().uri("/api/v1/demo/sessions").with(spaCsrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sector\": \"" + sector + "\", \"role\": \"" + role + "\"}").exchange();
     }
 
     private MvcTestResult agenda(Session session) {

@@ -703,6 +703,12 @@ export interface components {
         DemoSessionRequest: {
             /** @enum {string} */
             role: "OWNER" | "STAFF";
+            /** @enum {string} */
+            sector: "BARBERSHOP" | "HAIR_AND_BEAUTY" | "MECHANIC" | "PSYCHOLOGY" | "PHYSIOTHERAPY" | "VETERINARY";
+        };
+        DemoSwitchRequest: {
+            /** @enum {string} */
+            role: "OWNER" | "STAFF";
         };
         InboxEmail: {
             /** Format: uuid */
@@ -783,6 +789,7 @@ export interface components {
             /** Format: uuid */
             businessId: string;
             demo: boolean;
+            demoCanSwitch: boolean;
             name: string;
             /** @enum {string} */
             role: "OWNER" | "STAFF";
@@ -1352,7 +1359,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DemoSessionRequest"];
+                "application/json": components["schemas"]["DemoSwitchRequest"];
             };
         };
         responses: {
