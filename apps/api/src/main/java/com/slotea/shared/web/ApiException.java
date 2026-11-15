@@ -45,4 +45,9 @@ public class ApiException extends ErrorResponseException {
     public static ApiException conflict(String detail) {
         return new ApiException(HttpStatus.CONFLICT, detail);
     }
+
+    /** Temporal: el cliente puede volver a intentarlo más tarde (p. ej. la demo está llena). */
+    public static ApiException serviceUnavailable(String detail) {
+        return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, detail);
+    }
 }

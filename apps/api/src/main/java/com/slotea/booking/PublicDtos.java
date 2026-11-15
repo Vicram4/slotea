@@ -24,10 +24,13 @@ public final class PublicDtos {
     private PublicDtos() {
     }
 
-    /** Lo que se puede reservar en un negocio: servicios activos que hace algún profesional activo. */
+    /**
+     * Lo que se puede reservar en un negocio: servicios activos que hace algún profesional activo.
+     * {@code demo}: es una copia de la demo (no se envían emails; la web lo avisa).
+     */
     public record PublicBusinessResponse(String slug, String name,
             @Schema(example = "Europe/Madrid") String timezone,
-            List<PublicService> services, List<PublicStaff> staff) {
+            List<PublicService> services, List<PublicStaff> staff, boolean demo) {
     }
 
     public record PublicService(UUID id, String name, @Nullable String description, int durationMin,

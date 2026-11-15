@@ -58,7 +58,7 @@ class PublicBusinessService {
                         .map(s -> new PublicService(s.getId(), s.getName(), s.getDescription(), s.getDurationMin(),
                                 s.getPriceCents()))
                         .toList(),
-                staff);
+                staff, business.isDemo());
     }
 
     private static PublicStaff toPublic(ActiveStaff s, Set<UUID> activeServices) {

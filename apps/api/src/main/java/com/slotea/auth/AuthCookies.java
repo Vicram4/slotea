@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * la API, así que son <em>first-party</em>.
  */
 @Component
-class AuthCookies {
+public class AuthCookies {
 
     private final AuthProperties properties;
 
@@ -24,7 +24,7 @@ class AuthCookies {
         this.properties = properties;
     }
 
-    void write(HttpServletResponse response, AuthTokens tokens) {
+    public void write(HttpServletResponse response, AuthTokens tokens) {
         add(response, AuthClaims.ACCESS_COOKIE, tokens.accessToken(), "/", properties.accessTokenTtl());
         add(response, AuthClaims.REFRESH_COOKIE, tokens.refreshToken(), AuthClaims.REFRESH_COOKIE_PATH,
                 properties.refreshTokenTtl());

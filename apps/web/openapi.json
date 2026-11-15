@@ -7,7 +7,7 @@
   "paths" : {
     "/api/v1/appointments" : {
       "get" : {
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "parameters" : [ {
           "in" : "query",
           "name" : "from",
@@ -51,7 +51,7 @@
     },
     "/api/v1/appointments/{id}" : {
       "get" : {
-        "operationId" : "get_4",
+        "operationId" : "get_5",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -433,6 +433,114 @@
         },
         "summary" : "Borrar un cierre. Un empleado solo puede borrar sus propias ausencias",
         "tags" : [ "schedule" ]
+      }
+    },
+    "/api/v1/demo/inbox" : {
+      "get" : {
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/InboxEmail"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Bandeja de la demo: los últimos emails de esta copia (nunca se envían)",
+        "tags" : [ "demo" ]
+      }
+    },
+    "/api/v1/demo/inbox/{id}" : {
+      "get" : {
+        "operationId" : "get_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InboxEmailDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Un email de la bandeja de la demo, renderizado (HTML y texto)",
+        "tags" : [ "demo" ]
+      }
+    },
+    "/api/v1/demo/sessions" : {
+      "post" : {
+        "operationId" : "create_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DemoSessionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "summary" : "Crear una copia de la demo y entrar en ella",
+        "tags" : [ "demo" ]
+      }
+    },
+    "/api/v1/demo/switch" : {
+      "post" : {
+        "operationId" : "switchRole",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DemoSessionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cambiar de dueño a empleado (o al revés) en la misma copia de la demo",
+        "tags" : [ "demo" ]
       }
     },
     "/api/v1/me" : {
@@ -1427,6 +1535,84 @@
         },
         "required" : [ "date", "slots" ]
       },
+      "DemoSessionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "role" : {
+            "type" : "string",
+            "enum" : [ "OWNER", "STAFF" ]
+          }
+        },
+        "required" : [ "role" ]
+      },
+      "InboxEmail" : {
+        "type" : "object",
+        "properties" : {
+          "appointmentId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "toBusiness" : {
+            "type" : "boolean"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "BOOKING_CONFIRMED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED", "BUSINESS_NEW_BOOKING", "BUSINESS_BOOKING_RESCHEDULED", "BUSINESS_BOOKING_CANCELLED" ]
+          }
+        },
+        "required" : [ "createdAt", "id", "subject", "to", "toBusiness", "type" ]
+      },
+      "InboxEmailDetail" : {
+        "type" : "object",
+        "properties" : {
+          "appointmentId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "html" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "toBusiness" : {
+            "type" : "boolean"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "BOOKING_CONFIRMED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED", "BUSINESS_NEW_BOOKING", "BUSINESS_BOOKING_RESCHEDULED", "BUSINESS_BOOKING_CANCELLED" ]
+          }
+        },
+        "required" : [ "createdAt", "html", "id", "subject", "text", "to", "toBusiness", "type" ]
+      },
       "LoginRequest" : {
         "type" : "object",
         "properties" : {
@@ -1560,6 +1746,9 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "demo" : {
+            "type" : "boolean"
+          },
           "name" : {
             "type" : "string"
           },
@@ -1571,7 +1760,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "businessId", "name", "role", "slug" ]
+        "required" : [ "businessId", "demo", "name", "role", "slug" ]
       },
       "PingResponse" : {
         "type" : "object",
@@ -1592,6 +1781,9 @@
       "PublicBusinessResponse" : {
         "type" : "object",
         "properties" : {
+          "demo" : {
+            "type" : "boolean"
+          },
           "name" : {
             "type" : "string"
           },
@@ -1615,7 +1807,7 @@
             "example" : "Europe/Madrid"
           }
         },
-        "required" : [ "name", "services", "slug", "staff", "timezone" ]
+        "required" : [ "demo", "name", "services", "slug", "staff", "timezone" ]
       },
       "PublicService" : {
         "type" : "object",

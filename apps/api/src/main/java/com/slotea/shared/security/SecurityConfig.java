@@ -33,6 +33,7 @@ class SecurityConfig {
             pathPattern("/api/v1/auth/**"),
             pathPattern("/api/v1/ping"),
             pathPattern("/api/v1/public/**"),
+            pathPattern("/api/v1/demo/sessions"), // crear una copia de la demo (cambiar de rol sí exige sesión)
             pathPattern("/actuator/health/**"),
             pathPattern("/v3/api-docs/**"),
             pathPattern("/swagger-ui/**"),

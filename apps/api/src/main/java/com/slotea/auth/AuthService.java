@@ -40,6 +40,13 @@ public class AuthService {
             "demo", "ayuda", "help", "soporte", "precios", "legal", "privacidad", "terminos", "cookies",
             "static", "public", "assets", "www", "slotea");
 
+    /** Las copias de la demo se llaman {@code demo-xxxxxxxx}: un negocio real no puede usar ese prefijo. */
+    static final String DEMO_SLUG_PREFIX = "demo-";
+
+    static boolean isReserved(String slug) {
+        return RESERVED_SLUGS.contains(slug) || slug.startsWith(DEMO_SLUG_PREFIX);
+    }
+
     private static final String INVALID_CREDENTIALS = "Email o contraseña incorrectos.";
     private static final String INVALID_SESSION = "La sesión ha caducado. Vuelve a iniciar sesión.";
 
@@ -71,7 +78,7 @@ public class AuthService {
     }
 
     /** Resultado de una operación que abre sesión: tokens para las cookies y el «quién soy». */
-    record Session(AuthTokens tokens, MeResponse me) {
+    public record Session(AuthTokens tokens, MeResponse me) {
     }
 
     Session signup(SignupRequest request) {
@@ -82,7 +89,7 @@ public class AuthService {
         String email = AppUser.normalizeEmail(request.email());
         String slug = request.slug();
         return system.execute(() -> {
-            if (RESERVED_SLUGS.contains(slug) || businesses.existsBySlug(slug)) {
+            if (isReserved(slug) || businesses.existsBySlug(slug)) {
                 throw ApiException.conflict("Esa dirección ya está en uso. Prueba con otra.");
             }
             if (users.existsByEmail(email)) {
@@ -152,6 +159,27 @@ public class AuthService {
             refreshTokens.findByTokenHash(hash)
                     .ifPresent(token -> refreshTokens.revokeFamily(token.getFamilyId(), Instant.now(clock)));
             return null;
+        });
+    }
+
+    /**
+     * Abre sesión, sin contraseña, como un usuario de una copia de la demo (botones «Entrar como…»).
+     * Solo sirve para negocios {@code is_demo} y para quien es miembro de ese negocio: un usuario real
+     * no puede entrar así nunca. Fuera de cualquier transacción (la copia ya tiene que estar guardada).
+     */
+    public Session demoSession(UUID userId, UUID businessId) {
+        return system.execute(() -> {
+            boolean demo = businesses.findById(businessId).map(Business::isDemo).orElse(false);
+            AppUser user = users.findById(userId).orElse(null);
+            if (!demo || user == null) {
+                throw ApiException.notFound("Esa demo ya no existe.");
+            }
+            Session session = startSession(user, UUID.randomUUID(), businessId);
+            MembershipSummary active = session.me().activeBusiness();
+            if (active == null || !active.businessId().equals(businessId)) {
+                throw new IllegalStateException("Demo user is not a member of its demo business");
+            }
+            return session;
         });
     }
 
