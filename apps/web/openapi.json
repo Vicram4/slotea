@@ -5,6 +5,144 @@
     "version" : "v0"
   },
   "paths" : {
+    "/api/v1/appointments" : {
+      "get" : {
+        "operationId" : "list_2",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "in" : "query",
+          "name" : "staffId",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgendaResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Citas que empiezan entre dos fechas (incluidas, máx. 42 días, en la zona del negocio). Un empleado solo recibe las suyas",
+        "tags" : [ "agenda" ]
+      }
+    },
+    "/api/v1/appointments/{id}" : {
+      "get" : {
+        "operationId" : "get_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgendaAppointment"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Una cita (404 si es de otro profesional y quien pregunta es un empleado)",
+        "tags" : [ "agenda" ]
+      }
+    },
+    "/api/v1/appointments/{id}/cancel" : {
+      "post" : {
+        "operationId" : "cancel_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgendaAppointment"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cancelar una cita que aún no ha empezado y avisar al cliente por email. Repetirlo no hace nada",
+        "tags" : [ "agenda" ]
+      }
+    },
+    "/api/v1/appointments/{id}/status" : {
+      "put" : {
+        "operationId" : "recordOutcome",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgendaAppointment"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Marcar cómo acabó una cita que ya ha empezado: COMPLETED, NO_SHOW o CONFIRMED (deshacer)",
+        "tags" : [ "agenda" ]
+      }
+    },
     "/api/v1/auth/csrf" : {
       "get" : {
         "operationId" : "csrf",
@@ -272,7 +410,7 @@
             "description" : "OK"
           }
         },
-        "summary" : "Crear un cierre del negocio o una ausencia de un profesional (solo el dueño)",
+        "summary" : "Crear un cierre del negocio o una ausencia de un profesional. Un empleado solo puede crear sus propias ausencias",
         "tags" : [ "schedule" ]
       }
     },
@@ -293,7 +431,7 @@
             "description" : "OK"
           }
         },
-        "summary" : "Borrar un cierre (solo el dueño)",
+        "summary" : "Borrar un cierre. Un empleado solo puede borrar sus propias ausencias",
         "tags" : [ "schedule" ]
       }
     },
@@ -958,6 +1096,136 @@
   },
   "components" : {
     "schemas" : {
+      "AgendaAppointment" : {
+        "type" : "object",
+        "properties" : {
+          "canCancel" : {
+            "type" : "boolean"
+          },
+          "canRecordOutcome" : {
+            "type" : "boolean"
+          },
+          "cancelledAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "customer" : {
+            "$ref" : "#/components/schemas/AgendaCustomer"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "endTime" : {
+            "type" : "string",
+            "example" : "10:45",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          },
+          "endsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "notes" : {
+            "type" : [ "string", "null" ]
+          },
+          "serviceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "serviceName" : {
+            "type" : "string"
+          },
+          "staffId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "staffName" : {
+            "type" : "string"
+          },
+          "startTime" : {
+            "type" : "string",
+            "example" : "10:15",
+            "pattern" : "^[0-2][0-9]:[0-5][0-9]$"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW" ]
+          }
+        },
+        "required" : [ "canCancel", "canRecordOutcome", "createdAt", "customer", "date", "endTime", "endsAt", "id", "serviceId", "serviceName", "staffId", "staffName", "startTime", "startsAt", "status" ]
+      },
+      "AgendaCustomer" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "email", "fullName" ]
+      },
+      "AgendaResponse" : {
+        "type" : "object",
+        "properties" : {
+          "appointments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AgendaAppointment"
+            }
+          },
+          "from" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "staff" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AgendaStaff"
+            }
+          },
+          "timezone" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "appointments", "from", "staff", "timezone", "to" ]
+      },
+      "AgendaStaff" : {
+        "type" : "object",
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "active", "displayName", "id" ]
+      },
       "AvailabilityResponse" : {
         "type" : "object",
         "properties" : {
@@ -1595,6 +1863,16 @@
           }
         },
         "required" : [ "serviceIds" ]
+      },
+      "StatusRequest" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW" ]
+          }
+        },
+        "required" : [ "status" ]
       },
       "TimeSlot" : {
         "type" : "object",

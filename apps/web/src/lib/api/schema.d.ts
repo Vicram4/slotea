@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+    "/api/v1/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Citas que empiezan entre dos fechas (incluidas, máx. 42 días, en la zona del negocio). Un empleado solo recibe las suyas */
+        get: operations["list_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Una cita (404 si es de otro profesional y quien pregunta es un empleado) */
+        get: operations["get_4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancelar una cita que aún no ha empezado y avisar al cliente por email. Repetirlo no hace nada */
+        post: operations["cancel_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Marcar cómo acabó una cita que ya ha empezado: COMPLETED, NO_SHOW o CONFIRMED (deshacer) */
+        put: operations["recordOutcome"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/csrf": {
         parameters: {
             query?: never;
@@ -151,7 +219,7 @@ export interface paths {
         /** Cierres del negocio y ausencias de profesionales que tocan el periodo [from, to] */
         get: operations["closures"];
         put?: never;
-        /** Crear un cierre del negocio o una ausencia de un profesional (solo el dueño) */
+        /** Crear un cierre del negocio o una ausencia de un profesional. Un empleado solo puede crear sus propias ausencias */
         post: operations["createClosure"];
         delete?: never;
         options?: never;
@@ -169,7 +237,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Borrar un cierre (solo el dueño) */
+        /** Borrar un cierre. Un empleado solo puede borrar sus propias ausencias */
         delete: operations["deleteClosure"];
         options?: never;
         head?: never;
@@ -439,6 +507,56 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AgendaAppointment: {
+            canCancel: boolean;
+            canRecordOutcome: boolean;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            customer: components["schemas"]["AgendaCustomer"];
+            /** Format: date */
+            date: string;
+            /** @example 10:45 */
+            endTime: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: uuid */
+            id: string;
+            notes?: string | null;
+            /** Format: uuid */
+            serviceId: string;
+            serviceName: string;
+            /** Format: uuid */
+            staffId: string;
+            staffName: string;
+            /** @example 10:15 */
+            startTime: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** @enum {string} */
+            status: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+        };
+        AgendaCustomer: {
+            email: string;
+            fullName: string;
+            phone?: string | null;
+        };
+        AgendaResponse: {
+            appointments: components["schemas"]["AgendaAppointment"][];
+            /** Format: date */
+            from: string;
+            staff: components["schemas"]["AgendaStaff"][];
+            timezone: string;
+            /** Format: date */
+            to: string;
+        };
+        AgendaStaff: {
+            active: boolean;
+            displayName: string;
+            /** Format: uuid */
+            id: string;
+        };
         AvailabilityResponse: {
             days: components["schemas"]["DayAvailability"][];
             timezone: string;
@@ -666,6 +784,10 @@ export interface components {
         StaffServicesRequest: {
             serviceIds: string[];
         };
+        StatusRequest: {
+            /** @enum {string} */
+            status: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+        };
         TimeSlot: {
             /**
              * Format: int32
@@ -701,6 +823,100 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_2: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                staffId?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgendaResponse"];
+                };
+            };
+        };
+    };
+    get_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgendaAppointment"];
+                };
+            };
+        };
+    };
+    cancel_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgendaAppointment"];
+                };
+            };
+        };
+    };
+    recordOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgendaAppointment"];
+                };
+            };
+        };
+    };
     csrf: {
         parameters: {
             query?: never;
