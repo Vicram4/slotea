@@ -1,10 +1,16 @@
 package com.slotea.demo;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
+import java.util.List;
+
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import com.slotea.demo.DemoDtos.DemoSector;
 
 /** Una plantilla mal escrita falla al cargar la clase, no al crear una copia en producción. */
 class DemoTemplateTest {
@@ -20,6 +26,16 @@ class DemoTemplateTest {
     @ValueSource(strings = { "#1e3a8a", "#18181b" })
     void acceptsReadableLowercaseColors(String color) {
         assertThatNoException().isThrownBy(() -> withColor(color));
+    }
+
+    /** En la agenda, «Toni» tiene que ser alguien del equipo, nunca también un cliente. */
+    @ParameterizedTest
+    @EnumSource(DemoSector.class)
+    void staffNamesAreUniqueAndNeverACustomerName(DemoSector sector) {
+        DemoTemplate template = DemoTemplates.of(sector);
+        List<String> staff = template.staff().stream().map(DemoTemplate.Staff::name).toList();
+
+        assertThat(staff).doesNotHaveDuplicates().doesNotContainAnyElementsOf(template.customerFirstNames());
     }
 
     private static DemoTemplate withColor(String color) {

@@ -83,13 +83,13 @@ class DemoApiTests {
         assertThat((Boolean) JsonPath.read(demo.body(), "$.activeBusiness.demo")).isTrue();
         assertThat((Boolean) JsonPath.read(demo.body(), "$.activeBusiness.demoCanSwitch")).isTrue();
         assertThat((String) JsonPath.read(demo.body(), "$.activeBusiness.name")).isEqualTo(DemoTemplates.BARBERSHOP.businessName());
-        assertThat((String) JsonPath.read(demo.body(), "$.user.fullName")).isEqualTo(DemoTemplates.OWNER_NAME);
+        assertThat((String) JsonPath.read(demo.body(), "$.user.fullName")).isEqualTo(DemoTemplates.BARBERSHOP.owner().name());
 
         // La agenda está llena: tres profesionales y citas ya empezadas que se pueden marcar.
         String agenda = AuthApi.body(agenda(demo.session()));
         List<String> staff = JsonPath.read(agenda, "$.staff[*].displayName");
-        assertThat(staff).containsExactlyInAnyOrder(DemoTemplates.OWNER_NAME, DemoTemplates.EMPLOYEE_NAME,
-                DemoTemplates.UNLINKED_NAME);
+        assertThat(staff).containsExactlyInAnyOrderElementsOf(
+                DemoTemplates.BARBERSHOP.staff().stream().map(DemoTemplate.Staff::name).toList());
         List<Object> pending = JsonPath.read(agenda, "$.appointments[?(@.status == 'CONFIRMED' && @.canRecordOutcome)]");
         assertThat(pending).isNotEmpty();
         List<Object> upcoming = JsonPath.read(agenda, "$.appointments[?(@.canCancel)]");
@@ -134,7 +134,7 @@ class DemoApiTests {
 
         String agenda = AuthApi.body(agenda(demo.session()));
         List<String> staffNames = JsonPath.read(agenda, "$.appointments[*].staffName");
-        assertThat(staffNames).isNotEmpty().containsOnly(DemoTemplates.EMPLOYEE_NAME);
+        assertThat(staffNames).isNotEmpty().containsOnly(DemoTemplates.BARBERSHOP.employee().orElseThrow().name());
         List<String> unmarked = JsonPath.read(agenda,
                 "$.appointments[?(@.status == 'CONFIRMED' && @.canRecordOutcome)].id");
         assertThat(unmarked).as("al menos una cita empezada sin marcar").isNotEmpty();
@@ -153,7 +153,7 @@ class DemoApiTests {
         String body = AuthApi.body(asStaff);
         assertThat((String) JsonPath.read(body, "$.activeBusiness.role")).isEqualTo("STAFF");
         assertThat((String) JsonPath.read(body, "$.activeBusiness.businessId")).isEqualTo(demo.businessId().toString());
-        assertThat((String) JsonPath.read(body, "$.user.fullName")).isEqualTo(DemoTemplates.EMPLOYEE_NAME);
+        assertThat((String) JsonPath.read(body, "$.user.fullName")).isEqualTo(DemoTemplates.BARBERSHOP.employee().orElseThrow().name());
 
         MvcTestResult back = catalog.send(AuthApi.sessionOf(asStaff), "POST", "/api/v1/demo/switch", """
                 {"role": "OWNER"}""");

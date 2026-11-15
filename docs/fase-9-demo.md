@@ -36,7 +36,7 @@ Las seis plantillas están en **`DemoTemplates`**. Cada sector enseña algo dist
 
 En todos los sectores:
 
-- «Dueño Demo» está enlazado al dueño, «Empleado Demo» tiene **cuenta enlazada a su ficha** (salvo en psicología) y «Profesional Demo» no tiene cuenta.
+- Cada sector tiene su equipo con nombres de pila ficticios (en la barbería, Toni, Rubén y Nacho): el primero es el dueño, el segundo tiene **cuenta de empleado enlazada a su ficha** (salvo en psicología, donde Inés trabaja sola) y el tercero no tiene cuenta.
 - Hay un festivo del negocio y, si hay empleado, unas vacaciones suyas.
 - Los clientes son ficticios («Lucía Ejemplo», «Mario Prueba»…), con emails `@example.com` (dominio reservado) y sin teléfono.
 - Citas desde hace 14 días hasta dentro de 14 días:

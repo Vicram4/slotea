@@ -153,7 +153,8 @@ class DemoSeederTests {
         assertThat(count("SELECT count(*) FROM membership WHERE business_id = ? AND role = 'STAFF'")).isOne();
         assertThat(count("""
                 SELECT count(*) FROM closure c JOIN staff_member s ON s.business_id = c.business_id AND s.id = c.staff_id
-                WHERE c.business_id = ? AND s.display_name = 'Empleado Demo'""")).isOne();
+                WHERE c.business_id = ? AND s.display_name = '%s'""".formatted(
+                        DemoTemplates.MECHANIC.employee().orElseThrow().name()))).isOne();
     }
 
     private SeededDemo seed(DemoTemplate template, Instant now) {

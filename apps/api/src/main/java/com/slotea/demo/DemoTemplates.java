@@ -14,8 +14,9 @@ import com.slotea.demo.DemoTemplate.Staff;
 import com.slotea.demo.DemoTemplate.Week;
 
 /**
- * El contenido de la demo de cada sector. Todo es ficticio: nombres que se ven inventados («Dueño
- * Demo», «Lucía Ejemplo»), emails {@code @example.com} (dominio reservado) y sin teléfonos.
+ * El contenido de la demo de cada sector. Todo es ficticio: el equipo solo con nombre de pila
+ * («Toni», «Inés»), los clientes apellidados «Ejemplo» o «Prueba», emails {@code @example.com}
+ * (dominio reservado) y sin teléfonos.
  *
  * <p>Cada sector enseña algo distinto del producto: servicios largos que no caben en cualquier hueco
  * (peluquería, taller), un margen entre citas (psicología, veterinaria), profesionales que solo hacen
@@ -25,10 +26,6 @@ final class DemoTemplates {
 
     private DemoTemplates() {
     }
-
-    static final String OWNER_NAME = "Dueño Demo";
-    static final String EMPLOYEE_NAME = "Empleado Demo";
-    static final String UNLINKED_NAME = "Profesional Demo";
 
     private static final Set<DayOfWeek> MON_TO_FRI = EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY);
     private static final Set<DayOfWeek> MON_TO_THU = EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.THURSDAY);
@@ -65,9 +62,9 @@ final class DemoTemplates {
                     new Service("Corte y barba", "El corte de pelo y el arreglo de barba en una sola cita.", 45, 5, 2200),
                     new Service("Corte infantil", "Para menores de 12 años.", 20, 0, 1000)),
             List.of(
-                    new Staff(OWNER_NAME, Account.OWNER, List.of(0, 1, 2, 3), barbershopHours(MON_TO_FRI)),
-                    new Staff(EMPLOYEE_NAME, Account.EMPLOYEE, List.of(0, 1, 2), barbershopHours(MON_TO_FRI)),
-                    new Staff(UNLINKED_NAME, Account.NONE, List.of(0, 1, 3), barbershopHours(TUE_TO_FRI))),
+                    new Staff("Toni", Account.OWNER, List.of(0, 1, 2, 3), barbershopHours(MON_TO_FRI)),
+                    new Staff("Rubén", Account.EMPLOYEE, List.of(0, 1, 2), barbershopHours(MON_TO_FRI)),
+                    new Staff("Nacho", Account.NONE, List.of(0, 1, 3), barbershopHours(TUE_TO_FRI))),
             FIRST_NAMES,
             List.of("Primera visita.", "Prefiere degradado bajo.", "Viene con su hijo.",
                     "Pregunta por productos para la barba."),
@@ -94,9 +91,9 @@ final class DemoTemplates {
                     new Service("Depilación de piernas", "Piernas completas con cera tibia.", 30, 0, 2000),
                     new Service("Limpieza facial", "Limpieza profunda e hidratación.", 60, 0, 3500)),
             List.of(
-                    new Staff(OWNER_NAME, Account.OWNER, List.of(0, 1, 2, 3, 4), salonHours()),
-                    new Staff(EMPLOYEE_NAME, Account.EMPLOYEE, List.of(0, 1, 2, 4), salonHours()),
-                    new Staff(UNLINKED_NAME, Account.NONE, List.of(5, 6, 7), salonHours())),
+                    new Staff("Rocío", Account.OWNER, List.of(0, 1, 2, 3, 4), salonHours()),
+                    new Staff("Bea", Account.EMPLOYEE, List.of(0, 1, 2, 4), salonHours()),
+                    new Staff("Alba", Account.NONE, List.of(5, 6, 7), salonHours())),
             FIRST_NAMES,
             List.of("Primera visita.", "Trae una foto del color que quiere.", "Piel sensible: prueba de tolerancia hecha.",
                     "Prefiere esmalte en tonos nude."),
@@ -124,9 +121,9 @@ final class DemoTemplates {
                     new Service("Pre-ITV", "Revisamos lo que mira la ITV antes de que vayas.", 30, 0, 3000),
                     new Service("Montaje de neumáticos", "Montaje y equilibrado de cuatro ruedas.", 60, 0, 2500)),
             List.of(
-                    new Staff(OWNER_NAME, Account.OWNER, List.of(0, 1, 2, 3, 4, 5), WORKSHOP_HOURS),
-                    new Staff(EMPLOYEE_NAME, Account.EMPLOYEE, List.of(0, 1, 2, 4, 5), WORKSHOP_HOURS),
-                    new Staff(UNLINKED_NAME, Account.NONE, List.of(1, 3, 4), WORKSHOP_HOURS)),
+                    new Staff("Paco", Account.OWNER, List.of(0, 1, 2, 3, 4, 5), WORKSHOP_HOURS),
+                    new Staff("Quique", Account.EMPLOYEE, List.of(0, 1, 2, 4, 5), WORKSHOP_HOURS),
+                    new Staff("Jorge", Account.NONE, List.of(1, 3, 4), WORKSHOP_HOURS)),
             FIRST_NAMES,
             List.of("Coche de ejemplo, gasolina, de 2015.", "Ruido al frenar.", "Testigo de motor encendido.",
                     "Deja el coche a primera hora y lo recoge por la tarde."),
@@ -142,7 +139,7 @@ final class DemoTemplates {
                     new Service("Primera consulta", "Una primera entrevista para ver qué necesitas.", 50, 10, 5000),
                     new Service("Sesión individual", "Terapia individual para adultos.", 50, 10, 6000),
                     new Service("Terapia de pareja", "Sesión con los dos miembros de la pareja.", 50, 10, 7500)),
-            List.of(new Staff(OWNER_NAME, Account.OWNER, List.of(0, 1, 2),
+            List.of(new Staff("Inés", Account.OWNER, List.of(0, 1, 2),
                     new Week().on(MON_TO_THU, "16:00-21:00").on(FRIDAY, "09:00-14:00").build())),
             FIRST_NAMES.subList(0, 14), // pocos pacientes, que repiten
             List.of("Prefiere las sesiones a última hora.", "Viene cada dos semanas.",
@@ -162,11 +159,11 @@ final class DemoTemplates {
                     new Service("Punción seca", "Para puntos gatillo musculares.", 30, 0, 3500),
                     new Service("Drenaje linfático", "Drenaje manual.", 60, 0, 5000)),
             List.of(
-                    new Staff(OWNER_NAME, Account.OWNER, List.of(0, 1, 2, 3, 4),
+                    new Staff("Noelia", Account.OWNER, List.of(0, 1, 2, 3, 4),
                             new Week().on(MON_TO_FRI, "09:00-14:00", "16:00-20:00").build()),
-                    new Staff(EMPLOYEE_NAME, Account.EMPLOYEE, List.of(0, 1, 2, 3),
+                    new Staff("Marcos", Account.EMPLOYEE, List.of(0, 1, 2, 3),
                             new Week().on(MON_TO_FRI, "08:00-15:00").build()),
-                    new Staff(UNLINKED_NAME, Account.NONE, List.of(0, 1, 2, 4),
+                    new Staff("Ane", Account.NONE, List.of(0, 1, 2, 4),
                             new Week().on(MON_TO_FRI, "15:00-21:00").build())),
             FIRST_NAMES,
             List.of("Lumbalgia: tercera sesión.", "Trae el informe de su médico.", "Prepara una carrera popular.",
@@ -190,9 +187,9 @@ final class DemoTemplates {
                     new Service("Baño y corte", "Peluquería canina: baño, secado y corte.", 90, 0, 3500),
                     new Service("Corte de uñas", "Rápido y sin estrés.", 15, 0, 1000)),
             List.of(
-                    new Staff(OWNER_NAME, Account.OWNER, List.of(0, 1, 2, 3, 5), VET_HOURS),
-                    new Staff(EMPLOYEE_NAME, Account.EMPLOYEE, List.of(0, 1, 2, 3), VET_HOURS),
-                    new Staff(UNLINKED_NAME, Account.NONE, List.of(4, 5),
+                    new Staff("Teresa", Account.OWNER, List.of(0, 1, 2, 3, 5), VET_HOURS),
+                    new Staff("Gonzalo", Account.EMPLOYEE, List.of(0, 1, 2, 3), VET_HOURS),
+                    new Staff("Lidia", Account.NONE, List.of(4, 5),
                             new Week().on(TUE_TO_FRI, "10:00-14:00", "17:00-20:00").on(SATURDAY, "10:00-13:30")
                                     .build())),
             FIRST_NAMES,
