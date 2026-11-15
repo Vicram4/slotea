@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--/* Aviso al negocio: un cliente ha reservado, cambiado o cancelado una cita. Mismo estilo que
+       appointment.html (tablas y estilos en línea). Las variables las pone EmailRenderer. */-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${businessName}">Negocio</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b;">
+  <div style="display:none;max-height:0;overflow:hidden;" th:text="|${customerName}: ${serviceName}, ${date} a las ${time}.|"></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="max-width:560px;background-color:#ffffff;border-radius:12px;">
+          <tr>
+            <td style="padding:24px 32px 0;font-size:14px;color:#71717a;" th:text="${businessName}">Negocio</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 32px 0;" th:switch="${type}">
+              <h1 th:case="'BUSINESS_NEW_BOOKING'" style="margin:0;font-size:24px;">Nueva reserva</h1>
+              <h1 th:case="'BUSINESS_BOOKING_RESCHEDULED'" style="margin:0;font-size:24px;">Un cliente ha cambiado su cita</h1>
+              <h1 th:case="*" style="margin:0;font-size:24px;">Un cliente ha cancelado su cita</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 0;font-size:16px;line-height:24px;" th:switch="${type}">
+              <p th:case="'BUSINESS_NEW_BOOKING'" style="margin:0;" th:text="|${customerName} ha reservado una cita.|"></p>
+              <p th:case="'BUSINESS_BOOKING_RESCHEDULED'" style="margin:0;" th:text="|${customerName} ha cambiado la hora de su cita.|"></p>
+              <p th:case="*" style="margin:0;" th:text="|${customerName} ha cancelado su cita. El hueco vuelve a estar libre.|"></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="background-color:#fafafa;border:1px solid #e4e4e7;border-radius:8px;font-size:15px;line-height:22px;">
+                <tr>
+                  <td style="padding:12px 16px 4px;color:#71717a;width:110px;">Cliente</td>
+                  <td style="padding:12px 16px 4px;font-weight:bold;" th:text="${customerName}">Cliente</td>
+                </tr>
+                <tr th:if="${customerEmail != null}">
+                  <td style="padding:4px 16px;color:#71717a;">Email</td>
+                  <td style="padding:4px 16px;" th:text="${customerEmail}">Email</td>
+                </tr>
+                <tr th:if="${customerPhone != null}">
+                  <td style="padding:4px 16px;color:#71717a;">Teléfono</td>
+                  <td style="padding:4px 16px;" th:text="${customerPhone}">Teléfono</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 16px;color:#71717a;">Servicio</td>
+                  <td style="padding:4px 16px;" th:text="${serviceName}">Servicio</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 16px;color:#71717a;">Profesional</td>
+                  <td style="padding:4px 16px;" th:text="${staffName}">Profesional</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 16px;color:#71717a;">Día</td>
+                  <td style="padding:4px 16px;" th:text="${date}">Día</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 16px 12px;color:#71717a;">Hora</td>
+                  <td th:style="${type == 'BUSINESS_BOOKING_CANCELLED'} ? 'padding:4px 16px 12px;text-decoration:line-through;' : 'padding:4px 16px 12px;'"
+                      th:text="|${time} – ${endTime}|">Hora</td>
+                </tr>
+                <tr th:if="${previousDate != null}">
+                  <td style="padding:0 16px 12px;color:#71717a;">Antes</td>
+                  <td style="padding:0 16px 12px;color:#71717a;text-decoration:line-through;"
+                      th:text="|${previousDate}, ${previousTime}|">Antes</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <a th:href="${agendaUrl}"
+                 style="display:inline-block;background-color:#18181b;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 20px;border-radius:8px;">
+                Ver la agenda de ese día</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;font-size:12px;line-height:18px;color:#a1a1aa;border-top:1px solid #f4f4f5;">
+              Si respondes a este email, le llegará al cliente.
+              <br>Slotea te avisa de cada reserva, cambio o cancelación que hacen tus clientes.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

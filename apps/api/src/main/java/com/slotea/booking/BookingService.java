@@ -23,8 +23,7 @@ import com.slotea.booking.PublicDtos.BookingRequest;
 import com.slotea.booking.PublicDtos.BookingResponse;
 import com.slotea.business.Business;
 import com.slotea.business.StaffMember;
-import com.slotea.notification.AppointmentEmail;
-import com.slotea.notification.EmailOutbox;
+import com.slotea.booking.AppointmentNotifications.Change;
 import com.slotea.notification.EmailType;
 import com.slotea.shared.links.AppointmentLinks;
 import com.slotea.shared.tenancy.TenantContext;
@@ -52,8 +51,9 @@ import com.slotea.shared.web.DatabaseErrors;
  * {@code BookingConcurrencyTests}). Un 40P01 se sigue tratando como «ocupado», por si acaso: en un
  * deadlock siempre gana al menos una transacción.
  *
- * <p><strong>Email de confirmación.</strong> Se encola en la misma transacción que la cita (outbox) y
- * se envía después del commit; si el SMTP falla, la reserva sigue siendo válida y el job lo reintenta.
+ * <p><strong>Emails.</strong> La confirmación al cliente y el aviso al negocio se encolan en la misma
+ * transacción que la cita (outbox) y se envían después del commit; si el SMTP falla, la reserva sigue
+ * siendo válida y el job los reintenta.
  */
 @Service
 class BookingService {
@@ -66,19 +66,19 @@ class BookingService {
     private final Customers customers;
     private final AppointmentRepository appointments;
     private final AppointmentLinks links;
-    private final EmailOutbox emails;
+    private final AppointmentNotifications notifications;
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
     private final Clock clock;
 
     BookingService(AvailabilityService availability, Customers customers, AppointmentRepository appointments,
-            AppointmentLinks links, EmailOutbox emails, JdbcClient jdbc, PlatformTransactionManager transactionManager,
+            AppointmentLinks links, AppointmentNotifications notifications, JdbcClient jdbc, PlatformTransactionManager transactionManager,
             Clock clock) {
         this.availability = availability;
         this.customers = customers;
         this.appointments = appointments;
         this.links = links;
-        this.emails = emails;
+        this.notifications = notifications;
         this.jdbc = jdbc;
         this.tx = new TransactionTemplate(transactionManager);
         this.clock = clock;
@@ -97,9 +97,9 @@ class BookingService {
 
         Booked booked = withFirstFreeStaff(slot.staff(), staff -> {
             UUID customerId = customers.findOrCreate(email, fullName, phone);
-            return create(slot, staff, customerId, email, fullName, notes);
+            return create(slot, staff, customerId, email, notes);
         }).orElseThrow(() -> ApiException.conflict(SLOT_TAKEN));
-        emails.sendNow(booked.emailId()); // ya confirmada: si falla, lo reintenta el job
+        notifications.sendNow(booked.emailIds()); // ya confirmada: si falla, lo reintenta el job
         return booked.response();
     }
 
@@ -128,10 +128,10 @@ class BookingService {
         return Optional.empty();
     }
 
-    private record Booked(BookingResponse response, UUID emailId) {
+    private record Booked(BookingResponse response, List<UUID> emailIds) {
     }
 
-    private Booked create(BookableSlot slot, StaffMember staff, UUID customerId, String email, String fullName,
+    private Booked create(BookableSlot slot, StaffMember staff, UUID customerId, String email,
             @Nullable String notes) {
         var service = slot.service();
         Instant endsAt = slot.startsAt().plus(Duration.ofMinutes(service.getDurationMin()));
@@ -144,14 +144,15 @@ class BookingService {
         appointment = appointments.saveAndFlush(appointment);
 
         Business business = slot.business();
-        UUID emailId = emails.enqueue(EmailType.BOOKING_CONFIRMED, email, new AppointmentEmail(id,
-                business.getSlug(), business.getName(), business.getContactEmail(), slot.zone().getId(), fullName,
-                service.getName(), staff.getDisplayName(), appointment.getStartsAt(), appointment.getEndsAt(), null));
+        // Los datos guardados del cliente (si ya existía, no se sobrescriben con los de esta reserva).
+        List<UUID> emailIds = notifications.enqueue(
+                new Change(EmailType.BOOKING_CONFIRMED, EmailType.BUSINESS_NEW_BOOKING, null), business,
+                appointment, customers.contact(customerId), service.getName(), staff.getDisplayName());
 
         var local = slot.startsAt().atZone(slot.zone());
         return new Booked(new BookingResponse(appointment.getId(), service.getName(), staff.getDisplayName(),
                 appointment.getStartsAt(), appointment.getEndsAt(), local.toLocalDate(), local.toLocalTime(),
-                slot.zone().getId(), email, links.token(id)), emailId);
+                slot.zone().getId(), email, links.token(id)), emailIds);
     }
 
     /** Cola por profesional hasta el final de la transacción (ver la documentación de la clase). */

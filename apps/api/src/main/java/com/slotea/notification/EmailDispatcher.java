@@ -143,7 +143,9 @@ class EmailDispatcher {
     private Outcome deliver(Claimed email) {
         try {
             AppointmentEmail data = json.readValue(email.payload(), AppointmentEmail.class);
-            send(email.to(), data.businessEmail(), renderer.render(email.type(), data));
+            // Responder a un email lleva a la otra parte: el cliente contesta al negocio y viceversa.
+            String replyTo = email.type().toBusiness() ? data.customerEmail() : data.businessEmail();
+            send(email.to(), replyTo, renderer.render(email.type(), data));
         } catch (RuntimeException e) {
             return failed(email, e);
         }
@@ -155,13 +157,14 @@ class EmailDispatcher {
         return Outcome.SENT;
     }
 
-    private void send(String to, String replyTo, RenderedEmail email) {
+    private void send(String to, @Nullable String replyTo, RenderedEmail email) {
         mail.send(message -> {
             var helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(settings.from());
             helper.setTo(to);
-            // Si el cliente responde, le contesta el negocio (no la plataforma).
-            helper.setReplyTo(replyTo);
+            if (replyTo != null) {
+                helper.setReplyTo(replyTo); // nunca la plataforma
+            }
             helper.setSubject(email.subject());
             helper.setText(email.text(), email.html());
         });

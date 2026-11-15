@@ -1,0 +1,19 @@
+[# th:switch="${type}"][# th:case="'BUSINESS_NEW_BOOKING'"]Nueva reserva[/][# th:case="'BUSINESS_BOOKING_RESCHEDULED'"]Un cliente ha cambiado su cita[/][# th:case="*"]Un cliente ha cancelado su cita[/][/] · [(${businessName})]
+
+[# th:switch="${type}"][# th:case="'BUSINESS_NEW_BOOKING'"][(${customerName})] ha reservado una cita.[/][# th:case="'BUSINESS_BOOKING_RESCHEDULED'"][(${customerName})] ha cambiado la hora de su cita.[/][# th:case="*"][(${customerName})] ha cancelado su cita. El hueco vuelve a estar libre.[/][/]
+
+Cliente:     [(${customerName})][# th:if="${customerEmail != null}"]
+Email:       [(${customerEmail})][/][# th:if="${customerPhone != null}"]
+Teléfono:    [(${customerPhone})][/]
+Servicio:    [(${serviceName})]
+Profesional: [(${staffName})]
+Día:         [(${date})]
+Hora:        [(${time})] – [(${endTime})][# th:if="${previousDate != null}"]
+Antes:       [(${previousDate})], [(${previousTime})][/]
+
+Ver la agenda de ese día:
+[(${agendaUrl})]
+
+--
+Si respondes a este email, le llegará al cliente.
+Slotea te avisa de cada reserva, cambio o cancelación que hacen tus clientes.

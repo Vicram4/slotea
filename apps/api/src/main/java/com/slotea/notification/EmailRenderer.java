@@ -55,17 +55,30 @@ class EmailRenderer {
             context.setVariable("previousDate", format(LONG_DATE, email.previousStartsAt(), zone));
             context.setVariable("previousTime", format(TIME, email.previousStartsAt(), zone));
         }
-        context.setVariable("manageUrl", links.manageUrl(email.businessSlug(), email.appointmentId()).toString());
-        context.setVariable("bookingUrl", links.bookingUrl(email.businessSlug()).toString());
-
         String when = format(SHORT_DATE, email.startsAt(), zone) + " a las " + format(TIME, email.startsAt(), zone);
         String subject = switch (type) {
             case BOOKING_CONFIRMED -> "Cita confirmada: " + email.serviceName() + ", " + when;
             case BOOKING_RESCHEDULED -> "Cita cambiada: " + email.serviceName() + ", ahora el " + when;
             case BOOKING_CANCELLED -> "Cita cancelada: " + email.serviceName() + ", " + when;
+            case BUSINESS_NEW_BOOKING -> "Nueva reserva: " + email.customerName() + ", " + when;
+            case BUSINESS_BOOKING_RESCHEDULED -> "Cita cambiada: " + email.customerName() + ", ahora el " + when;
+            case BUSINESS_BOOKING_CANCELLED -> "Cita cancelada: " + email.customerName() + ", " + when;
         };
-        return new RenderedEmail(subject, templates.process("email/appointment.txt", context),
-                templates.process("email/appointment", context));
+
+        String template;
+        if (type.toBusiness()) {
+            // El negocio no recibe el enlace del cliente (es su acceso a la cita): va a su agenda.
+            context.setVariable("customerEmail", email.customerEmail());
+            context.setVariable("customerPhone", email.customerPhone());
+            context.setVariable("agendaUrl", links.agendaUrl(email.startsAt().atZone(zone).toLocalDate()).toString());
+            template = "email/business-notice";
+        } else {
+            context.setVariable("manageUrl", links.manageUrl(email.businessSlug(), email.appointmentId()).toString());
+            context.setVariable("bookingUrl", links.bookingUrl(email.businessSlug()).toString());
+            template = "email/appointment";
+        }
+        return new RenderedEmail(subject, templates.process(template + ".txt", context),
+                templates.process(template, context));
     }
 
     private static String format(DateTimeFormatter formatter, Instant instant, ZoneId zone) {

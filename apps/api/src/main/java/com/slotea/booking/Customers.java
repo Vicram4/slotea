@@ -1,5 +1,10 @@
 package com.slotea.booking;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.hibernate.id.uuid.UuidVersion7Strategy;
@@ -28,8 +33,8 @@ class Customers {
         this.jdbc = jdbc;
     }
 
-    /** Cómo escribir a un cliente. */
-    record Contact(String email, String fullName) {
+    /** Cómo localizar a un cliente. */
+    record Contact(String email, String fullName, @Nullable String phone) {
 
         @Override
         public String toString() {
@@ -37,12 +42,30 @@ class Customers {
         }
     }
 
-    /** Email y nombre de un cliente del negocio actual. */
+    /** Datos de contacto de un cliente del negocio actual. */
     Contact contact(UUID customerId) {
-        return jdbc.sql("SELECT email, full_name FROM customer WHERE business_id = ? AND id = ?")
+        return jdbc.sql("SELECT email, full_name, phone FROM customer WHERE business_id = ? AND id = ?")
                 .params(TenantContext.requireBusinessId(), customerId)
-                .query((rs, _) -> new Contact(rs.getString("email"), rs.getString("full_name")))
+                .query((rs, _) -> contact(rs))
                 .single();
+    }
+
+    /** Los de varios clientes de una vez (la agenda), por id. */
+    Map<UUID, Contact> contacts(Collection<UUID> customerIds) {
+        if (customerIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, Contact> found = new HashMap<>();
+        jdbc.sql("SELECT id, email, full_name, phone FROM customer WHERE business_id = ? AND id = ANY(?)")
+                .params(TenantContext.requireBusinessId(), customerIds.toArray(UUID[]::new))
+                .query(rs -> {
+                    found.put(rs.getObject("id", UUID.class), contact(rs));
+                });
+        return found;
+    }
+
+    private static Contact contact(ResultSet rs) throws SQLException {
+        return new Contact(rs.getString("email"), rs.getString("full_name"), rs.getString("phone"));
     }
 
     /** Id del cliente con ese email (ya normalizado), creándolo si no existe. */

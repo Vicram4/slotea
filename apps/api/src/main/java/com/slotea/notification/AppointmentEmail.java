@@ -11,7 +11,10 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>No lleva el token del enlace: se recalcula al enviar a partir de {@code appointmentId}.
  *
- * @param previousStartsAt solo en {@link EmailType#BOOKING_RESCHEDULED}: la hora anterior.
+ * @param previousStartsAt solo en los cambios de hora: la hora anterior.
+ * @param customerEmail    para los avisos al negocio (responder al cliente). {@code null} en los
+ *                         emails encolados antes de la fase 8.
+ * @param customerPhone    opcional; solo se muestra en los avisos al negocio.
  */
 public record AppointmentEmail(
         UUID appointmentId,
@@ -24,10 +27,12 @@ public record AppointmentEmail(
         String staffName,
         Instant startsAt,
         Instant endsAt,
-        @Nullable Instant previousStartsAt) {
+        @Nullable Instant previousStartsAt,
+        @Nullable String customerEmail,
+        @Nullable String customerPhone) {
 
     @Override
     public String toString() {
-        return "AppointmentEmail[appointmentId=" + appointmentId + ", customerName=***]"; // fuera de los logs
+        return "AppointmentEmail[appointmentId=" + appointmentId + ", customer=***]"; // fuera de los logs
     }
 }

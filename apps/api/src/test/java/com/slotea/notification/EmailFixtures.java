@@ -37,7 +37,8 @@ final class EmailFixtures {
 
     static AppointmentEmail email(UUID appointmentId, String slug, Instant startsAt) {
         return new AppointmentEmail(appointmentId, slug, "Barbería de prueba", "negocio@example.test",
-                "Europe/Madrid", "Laura", "Corte", "Ana", startsAt, startsAt.plus(Duration.ofMinutes(30)), null);
+                "Europe/Madrid", "Laura", "Corte", "Ana", startsAt, startsAt.plus(Duration.ofMinutes(30)), null,
+                "laura@example.test", null);
     }
 
     static String uniqueAddress() {

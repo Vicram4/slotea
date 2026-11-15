@@ -3,6 +3,7 @@ package com.slotea.shared.links;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -71,6 +72,11 @@ public class AppointmentLinks {
     /** Página para ver, cancelar o cambiar la cita. */
     public URI manageUrl(String slug, UUID appointmentId) {
         return URI.create(webUrl + "/" + slug + "/cita/" + token(appointmentId));
+    }
+
+    /** La agenda del panel en ese día (fecha local del negocio). */
+    public URI agendaUrl(LocalDate day) {
+        return URI.create(webUrl + "/panel/agenda?date=" + day);
     }
 
     /** Página pública de reservas del negocio. */

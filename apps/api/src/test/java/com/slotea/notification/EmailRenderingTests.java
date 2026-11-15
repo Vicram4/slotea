@@ -55,7 +55,8 @@ class EmailRenderingTests {
     void aRescheduledAppointmentShowsTheOldTimeToo() {
         var data = new AppointmentEmail(APPOINTMENT, "barberia", "Barbería de prueba", "negocio@example.test",
                 "Europe/Madrid", "Laura", "Corte", "Ana", Instant.parse("2026-11-20T16:00:00Z"),
-                Instant.parse("2026-11-20T16:30:00Z"), Instant.parse("2026-11-19T09:15:00Z"));
+                Instant.parse("2026-11-20T16:30:00Z"), Instant.parse("2026-11-19T09:15:00Z"), "laura@example.test",
+                null);
 
         RenderedEmail email = renderer.render(EmailType.BOOKING_RESCHEDULED, data);
 
@@ -79,18 +80,68 @@ class EmailRenderingTests {
     void userInputIsEscapedInTheHtml() {
         var data = new AppointmentEmail(APPOINTMENT, "barberia", "Barbería <b>de</b> prueba",
                 "negocio@example.test", "Europe/Madrid", "<script>alert(1)</script>", "Corte", "Ana",
-                Instant.parse("2026-11-19T09:15:00Z"), Instant.parse("2026-11-19T09:45:00Z"), null);
+                Instant.parse("2026-11-19T09:15:00Z"), Instant.parse("2026-11-19T09:45:00Z"), null,
+                "<b>x</b>@example.test", "<i>600</i>");
 
-        String html = renderer.render(EmailType.BOOKING_CONFIRMED, data).html();
+        for (EmailType type : EmailType.values()) {
+            String html = renderer.render(type, data).html();
 
-        assertThat(html).contains("&lt;script&gt;alert(1)&lt;/script&gt;", "Barbería &lt;b&gt;de&lt;/b&gt; prueba")
-                .doesNotContain("<script>", "<b>de</b>");
+            assertThat(html).as(type.name())
+                    .contains("&lt;script&gt;alert(1)&lt;/script&gt;", "Barbería &lt;b&gt;de&lt;/b&gt; prueba")
+                    .doesNotContain("<script>", "<b>de</b>", "<b>x</b>", "<i>600</i>");
+        }
+    }
+
+    @Test
+    void theBusinessIsToldWhoBookedAndGetsALinkToThatDayInTheAgenda() {
+        var data = new AppointmentEmail(APPOINTMENT, "barberia", "Barbería de prueba", "negocio@example.test",
+                "Europe/Madrid", "Laura", "Corte", "Ana", Instant.parse("2026-11-19T23:30:00Z"),
+                Instant.parse("2026-11-20T00:00:00Z"), null, "laura@example.test", "+34 600 000 000");
+
+        RenderedEmail email = renderer.render(EmailType.BUSINESS_NEW_BOOKING, data);
+
+        // 23:30 UTC del jueves es ya el viernes 20 en Madrid: el enlace va al día local, no al UTC.
+        String agendaUrl = "https://web.example.test/panel/agenda?date=2026-11-20";
+        assertThat(email.subject()).isEqualTo("Nueva reserva: Laura, viernes 20 de noviembre a las 00:30");
+        assertThat(email.text()).contains("Nueva reserva · Barbería de prueba", "Laura ha reservado una cita.",
+                "laura@example.test", "+34 600 000 000", "Corte", "Ana", "00:30 – 01:00", agendaUrl)
+                .doesNotContain("<", "[(", "th:");
+        assertThat(email.html()).contains("Nueva reserva", "href=\"" + agendaUrl + "\"", "+34 600 000 000")
+                .doesNotContain(" th:");
+    }
+
+    @Test
+    void theBusinessNeverGetsTheCustomersManageLink() {
+        for (EmailType type : EmailType.values()) {
+            if (!type.toBusiness()) {
+                continue;
+            }
+            RenderedEmail email = render(type, "2026-11-19T09:15:00Z");
+            assertThat(email.text() + email.html()).as(type.name())
+                    .doesNotContain("/cita/", links.token(APPOINTMENT));
+        }
+    }
+
+    @Test
+    void businessNoticesForChangesAndCancellations() {
+        var data = new AppointmentEmail(APPOINTMENT, "barberia", "Barbería de prueba", "negocio@example.test",
+                "Europe/Madrid", "Laura", "Corte", "Ana", Instant.parse("2026-11-20T16:00:00Z"),
+                Instant.parse("2026-11-20T16:30:00Z"), Instant.parse("2026-11-19T09:15:00Z"), null, null);
+
+        RenderedEmail moved = renderer.render(EmailType.BUSINESS_BOOKING_RESCHEDULED, data);
+        assertThat(moved.subject()).isEqualTo("Cita cambiada: Laura, ahora el viernes 20 de noviembre a las 17:00");
+        assertThat(moved.text()).contains("Laura ha cambiado la hora de su cita.",
+                "Antes:       jueves 19 de noviembre de 2026, 10:15").doesNotContain("Email:", "Teléfono:");
+
+        RenderedEmail cancelled = render(EmailType.BUSINESS_BOOKING_CANCELLED, "2026-11-19T09:15:00Z");
+        assertThat(cancelled.subject()).isEqualTo("Cita cancelada: Laura, jueves 19 de noviembre a las 10:15");
+        assertThat(cancelled.text()).contains("Laura ha cancelado su cita. El hueco vuelve a estar libre.");
     }
 
     private RenderedEmail render(EmailType type, String startsAt) {
         Instant start = Instant.parse(startsAt);
         return renderer.render(type, new AppointmentEmail(APPOINTMENT, "barberia", "Barbería de prueba",
                 "negocio@example.test", "Europe/Madrid", "Laura", "Corte", "Ana", start,
-                start.plusSeconds(30 * 60), null));
+                start.plusSeconds(30 * 60), null, "laura@example.test", null));
     }
 }

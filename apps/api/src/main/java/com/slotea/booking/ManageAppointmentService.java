@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -15,8 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.slotea.booking.AppointmentNotifications.Change;
 import com.slotea.booking.AvailabilityService.BookableSlot;
-import com.slotea.booking.Customers.Contact;
 import com.slotea.booking.PublicDtos.AvailabilityResponse;
 import com.slotea.booking.PublicDtos.ManagedAppointmentResponse;
 import com.slotea.booking.PublicDtos.RescheduleRequest;
@@ -26,8 +27,6 @@ import com.slotea.business.StaffMember;
 import com.slotea.business.StaffMemberRepository;
 import com.slotea.catalog.Offering;
 import com.slotea.catalog.OfferingRepository;
-import com.slotea.notification.AppointmentEmail;
-import com.slotea.notification.EmailOutbox;
 import com.slotea.notification.EmailType;
 import com.slotea.shared.security.OpaqueTokens;
 import com.slotea.shared.tenancy.TenantContext;
@@ -44,7 +43,8 @@ import com.slotea.shared.web.ApiException;
  * <li>Cambiar de hora mueve <em>la misma fila</em> (conserva id y enlace) con las mismas reglas que una
  *     reserva nueva: el hueco tiene que ser uno de los ofrecidos y, si dos personas van a por él a la
  *     vez, la restricción de la BD deja pasar a una sola.</li>
- * <li>Cada cambio encola su email en la misma transacción y lo envía después del commit.</li>
+ * <li>Cada cambio encola sus emails (al cliente y el aviso al negocio) en la misma transacción y los
+ *     envía después del commit.</li>
  * </ul>
  */
 @Service
@@ -66,14 +66,15 @@ class ManageAppointmentService {
     private final BusinessRepository businesses;
     private final OfferingRepository offerings;
     private final StaffMemberRepository staff;
-    private final EmailOutbox emails;
+    private final AppointmentNotifications notifications;
     private final TransactionTemplate tx;
     private final TransactionTemplate readOnly;
     private final Clock clock;
 
     ManageAppointmentService(AppointmentRepository appointments, AvailabilityService availability,
             BookingService bookings, Customers customers, BusinessRepository businesses, OfferingRepository offerings,
-            StaffMemberRepository staff, EmailOutbox emails, PlatformTransactionManager transactionManager,
+            StaffMemberRepository staff, AppointmentNotifications notifications,
+            PlatformTransactionManager transactionManager,
             Clock clock) {
         this.appointments = appointments;
         this.availability = availability;
@@ -82,7 +83,7 @@ class ManageAppointmentService {
         this.businesses = businesses;
         this.offerings = offerings;
         this.staff = staff;
-        this.emails = emails;
+        this.notifications = notifications;
         this.tx = new TransactionTemplate(transactionManager);
         this.readOnly = new TransactionTemplate(transactionManager);
         this.readOnly.setReadOnly(true);
@@ -97,13 +98,14 @@ class ManageAppointmentService {
         Changed changed = Objects.requireNonNull(tx.execute(_ -> {
             Appointment appointment = load(token);
             if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-                return new Changed(view(appointment), null); // segundo clic: nada que hacer, ni email
+                return new Changed(view(appointment), List.of()); // segundo clic: nada que hacer, ni email
             }
             requireChangeable(appointment);
             appointment.cancel(clock.instant());
             appointments.saveAndFlush(appointment);
-            UUID emailId = enqueue(EmailType.BOOKING_CANCELLED, appointment, null);
-            return new Changed(view(appointment), emailId);
+            List<UUID> emailIds = enqueue(
+                    new Change(EmailType.BOOKING_CANCELLED, EmailType.BUSINESS_BOOKING_CANCELLED, null), appointment);
+            return new Changed(view(appointment), emailIds);
         }));
         return sent(changed);
     }
@@ -146,17 +148,16 @@ class ManageAppointmentService {
         appointment.moveTo(member.getId(), slot.startsAt(), endsAt, blockedUntil);
         // saveAndFlush: el UPDATE (y la posible violación 23P01) ocurre dentro del intento.
         appointments.saveAndFlush(appointment);
-        UUID emailId = enqueue(EmailType.BOOKING_RESCHEDULED, appointment, before.getStartsAt());
-        return new Changed(view(appointment), emailId);
+        List<UUID> emailIds = enqueue(new Change(EmailType.BOOKING_RESCHEDULED,
+                EmailType.BUSINESS_BOOKING_RESCHEDULED, before.getStartsAt()), appointment);
+        return new Changed(view(appointment), emailIds);
     }
 
-    private record Changed(ManagedAppointmentResponse view, @Nullable UUID emailId) {
+    private record Changed(ManagedAppointmentResponse view, List<UUID> emailIds) {
     }
 
     private ManagedAppointmentResponse sent(Changed changed) {
-        if (changed.emailId() != null) {
-            emails.sendNow(changed.emailId()); // ya confirmado: si falla, lo reintenta el job
-        }
+        notifications.sendNow(changed.emailIds()); // ya confirmado: si falla, lo reintenta el job
         return changed.view();
     }
 
@@ -184,13 +185,9 @@ class ManageAppointmentService {
         return appointment.getStartsAt().minus(BookingPolicy.CHANGE_DEADLINE);
     }
 
-    private UUID enqueue(EmailType type, Appointment appointment, @Nullable Instant previousStartsAt) {
-        Business business = business();
-        Contact customer = customers.contact(appointment.getCustomerId());
-        return emails.enqueue(type, customer.email(), new AppointmentEmail(appointment.getId(), business.getSlug(),
-                business.getName(), business.getContactEmail(), business.getTimezone(), customer.fullName(),
-                serviceName(appointment), staffName(appointment), appointment.getStartsAt(),
-                appointment.getEndsAt(), previousStartsAt));
+    private List<UUID> enqueue(Change change, Appointment appointment) {
+        return notifications.enqueue(change, business(), appointment, customers.contact(appointment.getCustomerId()),
+                serviceName(appointment), staffName(appointment));
     }
 
     private ManagedAppointmentResponse view(Appointment appointment) {

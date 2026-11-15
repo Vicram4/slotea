@@ -201,8 +201,10 @@ class PublicBookingApiTests {
                 .param(appointmentId).query(byte[].class).single();
         assertThat(storedHash).isEqualTo(OpaqueTokens.sha256(links.token(appointmentId)));
 
-        assertThat(jdbc.sql("SELECT status FROM email_outbox WHERE appointment_id = ?").param(appointmentId)
-                .query(String.class).list()).containsExactly("SENT");
+        // La confirmación al cliente y el aviso al negocio, ambos ya enviados.
+        assertThat(jdbc.sql("SELECT type || ' ' || status FROM email_outbox WHERE appointment_id = ? ORDER BY type")
+                .param(appointmentId).query(String.class).list())
+                .containsExactly("BOOKING_CONFIRMED SENT", "BUSINESS_NEW_BOOKING SENT");
     }
 
     @Test
