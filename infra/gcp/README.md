@@ -46,12 +46,13 @@ for s in db-url db-user db-password; do
   gcloud secrets create $s --replication-policy=user-managed --locations=$R --data-file=-   # pega el valor + Ctrl+D
 done
 # Clave de firma de los JWT: aleatoria, nadie la ve ni la teclea
-openssl rand -base64 48 | tr -d '\n' | \
+# (tr -d '\r\n': el openssl de Git Bash en Windows termina la línea con \r, que se colaría en la clave)
+openssl rand -base64 48 | tr -d '\r\n' | \
   gcloud secrets create jwt-secret --replication-policy=user-managed --locations=$R --data-file=-
 
 # Fase 7 (emails). Claves aleatorias: nadie las ve ni las teclea.
-openssl rand -base64 48 | tr -d '
-' |   gcloud secrets create link-secret --replication-policy=user-managed --locations=$R --data-file=-
+openssl rand -base64 48 | tr -d '\r\n' | \
+  gcloud secrets create link-secret --replication-policy=user-managed --locations=$R --data-file=-
 # JOBS_TOKEN: la misma cadena va también al secreto JOBS_TOKEN del repo de GitHub (lo usa jobs.yml).
 # Brevo: remitente verificado ("Slotea <...>"), usuario SMTP y clave SMTP; se pegan + Ctrl+D.
 for s in jobs-token mail-from mail-username mail-password; do
