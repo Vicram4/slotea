@@ -7,14 +7,16 @@ import {
   House,
   Inbox,
   LogOut,
+  Menu,
   Settings,
   Tags,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, useId, useState, type ReactNode } from "react";
 
 import { DemoBar } from "@/components/demo/demo-bar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,10 +47,12 @@ function isCurrent(pathname: string | null, href: string): boolean {
   return href === "/panel" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavLinks({ pathname, links }: { pathname: string | null; links: readonly NavLink[] }) {
+type NavProps = { links: readonly NavLink[]; onNavigate?: () => void };
+
+function NavLinks({ pathname, links, onNavigate }: NavProps & { pathname: string | null }) {
   return (
     <nav aria-label="Panel">
-      <ul className="flex flex-wrap gap-0.5 md:flex-col">
+      <ul className="grid gap-0.5">
         {links.map(({ href, label, icon: Icon }) => {
           const current = isCurrent(pathname, href);
           return (
@@ -56,6 +60,7 @@ function NavLinks({ pathname, links }: { pathname: string | null; links: readonl
               <Link
                 href={href}
                 aria-current={current ? "page" : undefined}
+                onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
                   current
@@ -78,16 +83,16 @@ function NavLinks({ pathname, links }: { pathname: string | null; links: readonl
  * `usePathname` en una ruta con parámetros (/panel/profesionales/[id]) no se conoce al prerenderizar:
  * va dentro de un Suspense cuyo fallback es la misma navegación sin marcar la página actual.
  */
-function PanelNav({ links }: { links: readonly NavLink[] }) {
+function PanelNav(props: NavProps) {
   return (
-    <Suspense fallback={<NavLinks pathname={null} links={links} />}>
-      <CurrentNav links={links} />
+    <Suspense fallback={<NavLinks pathname={null} {...props} />}>
+      <CurrentNav {...props} />
     </Suspense>
   );
 }
 
-function CurrentNav({ links }: { links: readonly NavLink[] }) {
-  return <NavLinks pathname={usePathname()} links={links} />;
+function CurrentNav(props: NavProps) {
+  return <NavLinks pathname={usePathname()} {...props} />;
 }
 
 /**
@@ -99,10 +104,20 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const me = useMe();
   const logout = useLogout();
+  // En el móvil la navegación se pliega bajo la cabecera; en escritorio siempre está a la vista.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
 
   useEffect(() => {
     if (me.data === null) router.replace("/login");
   }, [me.data, router]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   if (me.isPending || me.data === null) {
     return (
@@ -127,6 +142,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
     ...(isOwner && activeBusiness.demo ? [DEMO_INBOX_LINK] : []),
   ];
 
+  const closeMenu = () => setMenuOpen(false);
   const onLogout = async () => {
     await logout.mutateAsync().catch(() => undefined);
     router.replace("/login");
@@ -135,37 +151,54 @@ export function PanelShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[15rem_1fr] md:grid-rows-[auto_1fr]">
       <DemoBar me={me.data} />
-      <aside className="bg-muted/50 flex flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0">
+      <aside className="bg-muted/85 md:bg-muted/50 sticky top-0 z-20 flex flex-col border-b px-4 py-2.5 backdrop-blur md:h-dvh md:gap-6 md:border-r md:border-b-0 md:p-4">
         <div className="flex items-center gap-3 px-1">
           {activeBusiness && <BrandMark name={activeBusiness.name} />}
-          <div className="grid min-w-0">
+          <div className="grid min-w-0 flex-1">
             <span className="truncate text-sm font-semibold">{activeBusiness?.name ?? "Slotea"}</span>
             {activeBusiness && (
               <span className="text-muted-foreground text-xs">{roleLabels[activeBusiness.role]}</span>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-mr-2 md:hidden"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X aria-hidden /> : <Menu aria-hidden />}
+            Menú
+          </Button>
         </div>
-        {activeBusiness && <PanelNav links={links} />}
-        <div className="grid gap-1 md:mt-auto">
-          {activeBusiness && (
-            <Link
-              href={`/${activeBusiness.slug}`}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm"
-            >
-              <ExternalLink className="size-4 shrink-0" aria-hidden />
-              Tu página de reservas
-            </Link>
-          )}
-          <div className="flex items-center justify-between gap-2 border-t pt-3 pl-2.5">
-            <span className="text-muted-foreground truncate text-xs">{user.fullName}</span>
-            <Button variant="ghost" size="sm" onClick={onLogout} disabled={logout.isPending}>
-              <LogOut aria-hidden />
-              {logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}
-            </Button>
+        <div
+          id={menuId}
+          className={cn("flex-1 flex-col gap-6 pt-4 pb-2 md:flex md:p-0", menuOpen ? "flex" : "hidden")}
+        >
+          {activeBusiness && <PanelNav links={links} onNavigate={closeMenu} />}
+          <div className="grid gap-1 md:mt-auto">
+            {activeBusiness && (
+              <Link
+                href={`/${activeBusiness.slug}`}
+                onClick={closeMenu}
+                className="text-muted-foreground hover:text-foreground flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm"
+              >
+                <ExternalLink className="size-4 shrink-0" aria-hidden />
+                Tu página de reservas
+              </Link>
+            )}
+            <div className="flex items-center justify-between gap-2 border-t pt-3 pl-2.5">
+              <span className="text-muted-foreground truncate text-xs">{user.fullName}</span>
+              <Button variant="ghost" size="sm" onClick={onLogout} disabled={logout.isPending}>
+                <LogOut aria-hidden />
+                {logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}
+              </Button>
+            </div>
           </div>
         </div>
       </aside>
-      <main className="mx-auto grid w-full max-w-6xl content-start gap-6 p-6 md:p-10">
+      <main className="mx-auto grid w-full max-w-6xl min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6 p-6 md:p-10">
         {activeBusiness ? children : <p>Tu cuenta todavía no pertenece a ningún negocio.</p>}
       </main>
     </div>

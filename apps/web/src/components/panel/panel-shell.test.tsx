@@ -38,6 +38,27 @@ describe("PanelShell", () => {
     await vi.waitFor(() => expect(document.documentElement.style.getPropertyValue("--primary")).toBe("#be185d"));
   });
 
+  it("folds the navigation under a menu button on small screens and closes it after choosing a page", async () => {
+    server.use(http.get("/api/v1/me", () => HttpResponse.json(ownerMe)));
+    renderWithQuery(<PanelShell>Contenido</PanelShell>);
+
+    const menu = await screen.findByRole("button", { name: "Menú" });
+    expect(menu).toHaveAttribute("aria-expanded", "false");
+    const panel = document.getElementById(menu.getAttribute("aria-controls")!)!;
+    expect(panel).toHaveClass("hidden");
+
+    await userEvent.click(menu);
+    expect(menu).toHaveAttribute("aria-expanded", "true");
+    expect(panel).not.toHaveClass("hidden");
+
+    await userEvent.click(within(panel).getByRole("link", { name: "Agenda" }));
+    expect(menu).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(menu);
+    await userEvent.keyboard("{Escape}");
+    expect(menu).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("goes to the login page when there is no session", async () => {
     server.use(
       http.get("/api/v1/me", () => new HttpResponse(null, { status: 401 })),
