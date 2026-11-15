@@ -88,6 +88,7 @@ La respuesta de la reserva también devuelve el token. Así, la confirmación en
 
 - **Mailpit tardaba 10 s en saludar** a través del port-forward de Docker, por la búsqueda DNS inversa del cliente. Se arregla con `MP_SMTP_DISABLE_RDNS` (en `compose.yaml` y en el contenedor de los tests).
 - **JavaMail busca el nombre canónico de la máquina** para el `EHLO` y para el `Message-ID`. En este equipo tardaba 14 s por email. Se arregla fijando `mail.smtp.localhost` y `mail.from`.
+- **El primer `jobs.yml` falló con 411:** el frontal de Cloud Run exige `Content-Length` en un `POST`, y `curl -X POST` sin cuerpo no lo manda. Los tests no podían verlo (MockMvc no pasa por ese frontal). Se arregla con `-H "Content-Length: 0"`.
 - **El health de mail tumbaba `/actuator/health`** cuando el SMTP no respondía (lo destaparon `ApiApplicationTests` y `ProdProfileTests`). Desactivado.
 
 ## Tests

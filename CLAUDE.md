@@ -40,6 +40,8 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Emails: se encolan en `email_outbox` **dentro** de la transacción del cambio y se envían con `EmailOutbox.sendNow` **después** del commit (nunca en `AFTER_COMMIT` ni en segundo plano: ver `docs/fase-7-emails.md`). No reactives el health de mail.
 - Mailpit necesita `MP_SMTP_DISABLE_RDNS` y JavaMail, `mail.smtp.localhost` + `mail.from`: sin ellos, cada envío tarda 10 s o más (DNS).
 - El token del enlace de la cita es un HMAC del id (`AppointmentLinks`): el id de `Appointment` lo genera la aplicación (`Appointment.newId()`), no Hibernate.
+- Cloud Run responde **411** a un `POST` sin cuerpo ni `Content-Length` (`curl -X POST` a secas): añade `-H "Content-Length: 0"`.
+- `openssl` en Git Bash (Windows) termina la línea con `\r`: al generar secretos, `tr -d '\r\n'`.
 - Ante la duda, **lee la documentación de la versión instalada** antes de escribir código.
 
 ## Arquitectura
