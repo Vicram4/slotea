@@ -14,9 +14,15 @@ Plataforma de reservas de citas para pequeños negocios (peluquerías, barbería
 | Base de datos | PostgreSQL 17 (multi-tenant con `@TenantId` de Hibernate) |
 | Web | Next.js 16 (App Router) · TypeScript · Tailwind 4 + shadcn/ui · TanStack Query · cliente tipado desde OpenAPI |
 | Tests | JUnit 5 + Testcontainers · Vitest + Testing Library + MSW |
-
-Cómo funcionan la sesión y el aislamiento entre negocios: [docs/fase-4-identidad.md](docs/fase-4-identidad.md).
 | CI | GitHub Actions |
+
+## Diseño
+
+- [Sesión y aislamiento entre negocios](docs/fase-4-identidad.md)
+- [Catálogo: servicios, profesionales, horarios y cierres](docs/fase-5-catalogo.md)
+- [Disponibilidad y reservas sin doble reserva](docs/fase-6-reservas.md)
+- [Emails (outbox) y gestión de la cita por enlace](docs/fase-7-emails.md)
+- [Agenda del negocio y avisos](docs/fase-8-agenda.md)
 
 ## Estructura
 
