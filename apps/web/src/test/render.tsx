@@ -30,6 +30,7 @@ export const ownerMe: Me = {
     slug: "barberia-demo",
     name: "Barbería Demo",
     role: "OWNER",
+    demo: false,
   },
   memberships: [
     {
@@ -37,6 +38,7 @@ export const ownerMe: Me = {
       slug: "barberia-demo",
       name: "Barbería Demo",
       role: "OWNER",
+      demo: false,
     },
   ],
 };

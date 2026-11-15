@@ -22,6 +22,7 @@ import {
   usePublicBusiness,
   useWeekAvailability,
 } from "@/lib/booking";
+import { DEMO_CUSTOMER } from "@/lib/demo";
 import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { customerSchema, type CustomerData, type CustomerValues } from "@/lib/validation/booking";
@@ -47,7 +48,16 @@ export function BookingPage({ slug }: { slug: string }) {
       </Alert>
     );
   }
-  if (booking) return <BookingConfirmation slug={slug} booking={booking} onAgain={() => setBooking(null)} />;
+  if (booking) {
+    return (
+      <BookingConfirmation
+        slug={slug}
+        booking={booking}
+        demo={business.data.demo}
+        onAgain={() => setBooking(null)}
+      />
+    );
+  }
   return <BookingFlow slug={slug} business={business.data} onBooked={setBooking} />;
 }
 
@@ -202,6 +212,7 @@ function BookingFlow({
       {service && slot && date && (
         <CustomerSection
           slug={slug}
+          demo={business.demo}
           form={form}
           summary={`${service.name} con ${
             staffForService.find((s) => s.id === staffId)?.displayName ?? "cualquier profesional"
@@ -222,15 +233,42 @@ function BookingFlow({
 
 function BusinessHeader({ business }: { business: PublicBusiness }) {
   return (
-    <header className="grid gap-1">
-      <h1 className="text-3xl font-bold tracking-tight">{business.name}</h1>
-      <p className="text-muted-foreground">Reserva tu cita online.</p>
+    <header className="grid gap-3">
+      {business.demo && <DemoNotice />}
+      <div className="grid gap-1">
+        <h1 className="text-3xl font-bold tracking-tight">{business.name}</h1>
+        <p className="text-muted-foreground">Reserva tu cita online.</p>
+      </div>
     </header>
+  );
+}
+
+/** En una copia de la demo: aquí se juega el papel del cliente, y los emails van a la bandeja. */
+function DemoNotice() {
+  return (
+    <div
+      role="note"
+      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+    >
+      <p>
+        <strong>Demo:</strong> estás reservando como cliente. No se envía ningún email: lo verás en la bandeja de la
+        demo.
+      </p>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" asChild>
+          <Link href="/panel/bandeja">Bandeja de la demo</Link>
+        </Button>
+        <Button size="sm" variant="outline" asChild>
+          <Link href="/panel/agenda">Volver al panel</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 
 function CustomerSection({
   slug,
+  demo,
   form,
   summary,
   request,
@@ -238,6 +276,7 @@ function CustomerSection({
   onSlotTaken,
 }: {
   slug: string;
+  demo: boolean;
   form: UseFormReturn<CustomerValues, unknown, CustomerData>;
   summary: string;
   request: { serviceId: string; staffId: string | null; startsAt: string };
@@ -250,8 +289,14 @@ function CustomerSection({
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors },
   } = form;
+
+  const fillDemoData = () => {
+    setValue("fullName", DEMO_CUSTOMER.fullName, { shouldValidate: true });
+    setValue("email", DEMO_CUSTOMER.email, { shouldValidate: true });
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
@@ -284,6 +329,11 @@ function CustomerSection({
         4. Tus datos
       </h2>
       <p className="bg-muted rounded-md p-3 text-sm first-letter:uppercase">{summary}</p>
+      {demo && (
+        <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={fillDemoData}>
+          Rellenar con datos de prueba
+        </Button>
+      )}
       <form onSubmit={onSubmit} noValidate className="grid gap-4">
         <FormField label="Nombre" autoComplete="name" error={errors.fullName?.message} {...register("fullName")} />
         <FormField
@@ -319,7 +369,17 @@ function CustomerSection({
   );
 }
 
-function BookingConfirmation({ slug, booking, onAgain }: { slug: string; booking: Booking; onAgain: () => void }) {
+function BookingConfirmation({
+  slug,
+  booking,
+  demo,
+  onAgain,
+}: {
+  slug: string;
+  booking: Booking;
+  demo: boolean;
+  onAgain: () => void;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -328,8 +388,17 @@ function BookingConfirmation({ slug, booking, onAgain }: { slug: string; booking
           ¡Reserva confirmada!
         </CardTitle>
         <CardDescription>
-          Te hemos enviado un email a <strong>{booking.customerEmail}</strong> con los datos y un enlace para
-          cambiarla o cancelarla. Si no lo ves, mira en la carpeta de spam.
+          {demo ? (
+            <>
+              En la demo no se envía: el email para <strong>{booking.customerEmail}</strong> (y el aviso al negocio)
+              están en la bandeja de la demo.
+            </>
+          ) : (
+            <>
+              Te hemos enviado un email a <strong>{booking.customerEmail}</strong> con los datos y un enlace para
+              cambiarla o cancelarla. Si no lo ves, mira en la carpeta de spam.
+            </>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
@@ -350,6 +419,11 @@ function BookingConfirmation({ slug, booking, onAgain }: { slug: string; booking
           <Button asChild>
             <Link href={manageHref(slug, booking.manageToken)}>Ver o cambiar mi cita</Link>
           </Button>
+          {demo && (
+            <Button variant="outline" asChild>
+              <Link href="/panel/bandeja">Ver el email en la bandeja</Link>
+            </Button>
+          )}
           <Button variant="outline" onClick={onAgain}>
             Hacer otra reserva
           </Button>

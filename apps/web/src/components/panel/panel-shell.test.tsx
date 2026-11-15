@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,5 +61,42 @@ describe("PanelShell", () => {
     await vi.waitFor(() => expect(router.replace).toHaveBeenCalledWith("/login"));
     expect(loggedOut).toBe(true);
     expect(queryClient.getQueryData(["me"])).toBeNull();
+  });
+
+  it("shows no demo bar for a real business", async () => {
+    server.use(http.get("/api/v1/me", () => HttpResponse.json(ownerMe)));
+    renderWithQuery(<PanelShell>Contenido</PanelShell>);
+
+    expect(await screen.findByText("Contenido")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Demo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Bandeja de la demo" })).not.toBeInTheDocument();
+  });
+
+  it("in a demo copy, offers the inbox, the public page and switching to the employee", async () => {
+    const business = { ...ownerMe.activeBusiness!, slug: "demo-abc12345", demo: true };
+    const demoOwner = { ...ownerMe, activeBusiness: business, memberships: [business] };
+    const asStaff = { ...demoOwner, activeBusiness: { ...business, role: "STAFF" as const } };
+    let switchedTo: unknown;
+    server.use(
+      http.get("/api/v1/me", () => HttpResponse.json(demoOwner)),
+      http.post("/api/v1/demo/switch", async ({ request }) => {
+        switchedTo = await request.json();
+        return HttpResponse.json(asStaff);
+      }),
+    );
+    const { queryClient } = renderWithQuery(<PanelShell>Contenido</PanelShell>);
+
+    const bar = await screen.findByRole("region", { name: "Demo" });
+    expect(within(bar).getByRole("link", { name: "Reservar como cliente" })).toHaveAttribute("href", "/demo-abc12345");
+    expect(screen.getAllByRole("link", { name: "Bandeja de la demo" })).toHaveLength(2); // barra y navegación
+
+    await userEvent.click(within(bar).getByRole("button", { name: "Ver como empleado" }));
+
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith("/panel/agenda"));
+    expect(switchedTo).toEqual({ role: "STAFF" });
+    expect(queryClient.getQueryData<typeof asStaff>(["me"])?.activeBusiness?.role).toBe("STAFF");
+    // El empleado no tiene bandeja: los emails van al negocio y a los clientes.
+    expect(await within(bar).findByRole("button", { name: "Ver como dueño" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Bandeja de la demo" })).not.toBeInTheDocument();
   });
 });

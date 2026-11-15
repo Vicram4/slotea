@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Availability, Booking, PublicBusiness } from "@/lib/booking";
 import { addDays, todayIn } from "@/lib/dates";
+import { DEMO_CUSTOMER } from "@/lib/demo";
 import { server } from "@/test/msw";
 import { renderWithQuery } from "@/test/render";
 
@@ -17,6 +18,7 @@ const business: PublicBusiness = {
   slug: SLUG,
   name: "Barbería Demo",
   timezone: "Europe/Madrid",
+  demo: false,
   services: [
     { id: "s-corte", name: "Corte", description: "Lavado incluido", durationMin: 30, priceCents: 1500 },
     { id: "s-barba", name: "Barba", description: null, durationMin: 20, priceCents: null },
@@ -227,5 +229,42 @@ describe("BookingPage", () => {
     server.use(http.get(BASE, () => HttpResponse.json({ ...business, services: [], staff: [] })));
     renderWithQuery(<BookingPage slug={SLUG} />);
     expect(await screen.findByText("Este negocio todavía no admite reservas online.")).toBeInTheDocument();
+  });
+
+  it("in the demo, explains where the emails go and fills in test data", async () => {
+    businessWithAvailability();
+    server.use(http.get(BASE, () => HttpResponse.json({ ...business, demo: true })));
+    let body: { customer?: { fullName: string; email: string } } = {};
+    server.use(
+      http.post(`${BASE}/appointments`, async ({ request }) => {
+        body = (await request.json()) as typeof body;
+        return HttpResponse.json(
+          { ...confirmation(`${addDays(today, 1)}T09:00:00+01:00`), customerEmail: DEMO_CUSTOMER.email },
+          { status: 201 },
+        );
+      }),
+    );
+    renderWithQuery(<BookingPage slug={SLUG} />);
+
+    const notice = await screen.findByRole("note");
+    expect(notice).toHaveTextContent("No se envía ningún email");
+    expect(within(notice).getByRole("link", { name: "Bandeja de la demo" })).toHaveAttribute("href", "/panel/bandeja");
+
+    await chooseCorteAt("09:00");
+    await userEvent.click(screen.getByRole("button", { name: "Rellenar con datos de prueba" }));
+    expect(screen.getByLabelText("Nombre")).toHaveValue(DEMO_CUSTOMER.fullName);
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reserva" }));
+
+    expect(await screen.findByText(/En la demo no se envía/)).toBeInTheDocument();
+    expect(body.customer).toMatchObject(DEMO_CUSTOMER);
+    expect(screen.getByRole("link", { name: "Ver el email en la bandeja" })).toHaveAttribute("href", "/panel/bandeja");
+  });
+
+  it("outside the demo, shows neither the notice nor the test data button", async () => {
+    businessWithAvailability();
+    renderWithQuery(<BookingPage slug={SLUG} />);
+    await chooseCorteAt("09:00");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rellenar con datos de prueba" })).not.toBeInTheDocument();
   });
 });

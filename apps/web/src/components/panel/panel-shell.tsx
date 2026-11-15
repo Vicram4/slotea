@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, type ReactNode } from "react";
 
+import { DemoBar } from "@/components/demo/demo-bar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { roleLabels, useLogout, useMe } from "@/lib/session";
@@ -17,16 +18,21 @@ export const PANEL_LINKS = [
   { href: "/panel/cierres", label: "Cierres" },
 ] as const;
 
+/** Solo en una copia de la demo y para el dueño (los emails van al negocio y a los clientes). */
+export const DEMO_INBOX_LINK = { href: "/panel/bandeja", label: "Bandeja de la demo" } as const;
+
+type NavLink = { href: string; label: string };
+
 function isCurrent(pathname: string | null, href: string): boolean {
   if (pathname === null) return false;
   return href === "/panel" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavLinks({ pathname }: { pathname: string | null }) {
+function NavLinks({ pathname, links }: { pathname: string | null; links: readonly NavLink[] }) {
   return (
     <nav aria-label="Panel">
       <ul className="flex flex-wrap gap-1 md:flex-col">
-        {PANEL_LINKS.map((link) => {
+        {links.map((link) => {
           const current = isCurrent(pathname, link.href);
           return (
             <li key={link.href}>
@@ -49,16 +55,16 @@ function NavLinks({ pathname }: { pathname: string | null }) {
  * `usePathname` en una ruta con parámetros (/panel/profesionales/[id]) no se conoce al prerenderizar:
  * va dentro de un Suspense cuyo fallback es la misma navegación sin marcar la página actual.
  */
-function PanelNav() {
+function PanelNav({ links }: { links: readonly NavLink[] }) {
   return (
-    <Suspense fallback={<NavLinks pathname={null} />}>
-      <CurrentNav />
+    <Suspense fallback={<NavLinks pathname={null} links={links} />}>
+      <CurrentNav links={links} />
     </Suspense>
   );
 }
 
-function CurrentNav() {
-  return <NavLinks pathname={usePathname()} />;
+function CurrentNav({ links }: { links: readonly NavLink[] }) {
+  return <NavLinks pathname={usePathname()} links={links} />;
 }
 
 /**
@@ -91,6 +97,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
   }
 
   const { user, activeBusiness } = me.data;
+  const links: readonly NavLink[] =
+    activeBusiness?.demo && activeBusiness.role === "OWNER" ? [...PANEL_LINKS, DEMO_INBOX_LINK] : PANEL_LINKS;
 
   const onLogout = async () => {
     await logout.mutateAsync().catch(() => undefined);
@@ -98,7 +106,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[14rem_1fr]">
+    <div className="min-h-dvh md:grid md:grid-cols-[14rem_1fr] md:grid-rows-[auto_1fr]">
+      <DemoBar me={me.data} />
       <aside className="bg-muted/40 flex flex-col gap-6 border-b p-4 md:border-r md:border-b-0">
         <div className="grid gap-1">
           <span className="text-lg font-semibold">{activeBusiness?.name ?? "Slotea"}</span>
@@ -107,7 +116,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
             {activeBusiness && ` · ${roleLabels[activeBusiness.role]}`}
           </span>
         </div>
-        {activeBusiness && <PanelNav />}
+        {activeBusiness && <PanelNav links={links} />}
         <Button variant="outline" size="sm" className="md:mt-auto" onClick={onLogout} disabled={logout.isPending}>
           {logout.isPending ? "Cerrando sesión…" : "Cerrar sesión"}
         </Button>
