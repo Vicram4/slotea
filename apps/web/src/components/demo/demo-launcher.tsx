@@ -85,20 +85,20 @@ export function DemoLauncher({ wakeUpAfterMs = WAKE_UP_AFTER_MS }: { wakeUpAfter
   const entries = ENTRIES.filter(({ entry }) => entry !== "STAFF" || info?.hasStaff);
 
   return (
-    <section aria-labelledby="demo-title" className="grid gap-4 rounded-xl border p-6">
+    <section aria-labelledby="demo-title" className="grid gap-5">
       <div className="grid gap-1">
-        <h2 id="demo-title" className="text-xl font-semibold">
-          Prueba la demo
+        <h2 id="demo-title" className="text-lg font-semibold tracking-tight">
+          Pruébalo con un negocio de ejemplo
         </h2>
-        <p className="text-muted-foreground text-sm">
-          Un negocio ficticio con su agenda llena. Sin registrarte: tus cambios solo los ves tú y se borran en 24 horas.
-          No se envía ningún email; los verás en la bandeja de la demo.
+        <p className="text-muted-foreground max-w-2xl text-sm text-pretty">
+          Con su agenda llena y sin registrarte. Tus cambios solo los ves tú y se borran en 24 horas; no se envía
+          ningún email, los verás en la bandeja de la demo.
         </p>
       </div>
 
       {!sector || !info ? (
         <div className="grid gap-3">
-          <h3 className="text-sm font-medium">Elige un sector</h3>
+          <h3 className="sr-only">Elige un sector</h3>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {DEMO_SECTOR_ORDER.map((key) => {
               const { name, tagline, icon: Icon } = DEMO_SECTORS[key];
@@ -110,14 +110,14 @@ export function DemoLauncher({ wakeUpAfterMs = WAKE_UP_AFTER_MS }: { wakeUpAfter
                       else sectorButtons.current.delete(key);
                     }}
                     variant="outline"
-                    className="h-auto flex-col items-start gap-1 p-4 text-left whitespace-normal"
+                    className="hover:border-foreground/30 h-auto flex-col items-start gap-1.5 p-4 text-left whitespace-normal shadow-none hover:bg-transparent"
                     onClick={() => setSector(key)}
                   >
-                    <span className="flex items-center gap-2 font-semibold">
-                      <Icon className="size-4" aria-hidden />
+                    <span className="flex items-center gap-2 font-medium">
+                      <Icon className="text-muted-foreground size-4" aria-hidden />
                       {name}
                     </span>
-                    <span className="text-xs font-normal opacity-80">{tagline}</span>
+                    <span className="text-muted-foreground text-xs font-normal">{tagline}</span>
                   </Button>
                 </li>
               );
