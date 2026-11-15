@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type TimeSlot, useCanEdit, useSaveWeeklyHours, useWeeklyHours } from "@/lib/catalog";
-import { DAYS, slotErrors } from "@/lib/validation/catalog";
+import { DAYS, slotErrors, weeklySummary } from "@/lib/validation/catalog";
 
 type EditableSlot = TimeSlot & { key: number };
 
@@ -34,17 +34,22 @@ export function WeeklyHoursEditor({ staffId }: { staffId: string }) {
 
 function WeeklyHoursSummary({ slots }: { slots: TimeSlot[] }) {
   return (
-    <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
-      {DAYS.map(({ day, name }) => {
-        const daySlots = slots.filter((s) => s.dayOfWeek === day);
-        return (
-          <div key={day} className="contents">
-            <dt className="text-muted-foreground">{name}</dt>
-            <dd>{daySlots.length ? daySlots.map((s) => `${s.start}–${s.end}`).join(", ") : "Cerrado"}</dd>
-          </div>
-        );
-      })}
-    </dl>
+    <div className="grid max-w-2xl gap-3">
+      <p className="text-muted-foreground text-sm">{weeklySummary(slots)}</p>
+      <dl className="divide-y rounded-lg border text-sm">
+        {DAYS.map(({ day, name }) => {
+          const daySlots = slots.filter((s) => s.dayOfWeek === day);
+          return (
+            <div key={day} className="grid grid-cols-[8rem_1fr] px-4 py-3">
+              <dt className={daySlots.length ? "font-medium" : "text-muted-foreground"}>{name}</dt>
+              <dd className={daySlots.length ? "tabular-nums" : "text-muted-foreground"}>
+                {daySlots.length ? daySlots.map((s) => `${s.start}–${s.end}`).join(" · ") : "No trabaja"}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
   );
 }
 
@@ -89,23 +94,29 @@ function Editor({ staffId, initial }: { staffId: string; initial: TimeSlot[] }) 
   };
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-4">
+    <form onSubmit={onSubmit} noValidate className="grid max-w-2xl gap-4">
+      <p className="text-muted-foreground text-sm" aria-live="polite">
+        {weeklySummary(slots)}. Con dos tramos en un día, la jornada es partida.
+      </p>
       {formError && (
         <Alert variant="destructive">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      <div className="grid gap-3">
+      <div className="divide-y rounded-lg border">
         {DAYS.map(({ day, name }) => {
           const daySlots = slots.filter((s) => s.dayOfWeek === day);
           return (
-            <fieldset key={day} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[7rem_1fr]">
+            <fieldset key={day} className="grid gap-2 px-4 py-3 sm:grid-cols-[7rem_1fr]">
               <legend className="sr-only">{name}</legend>
-              <span aria-hidden className="pt-2 text-sm font-medium">
+              <span
+                aria-hidden
+                className={daySlots.length ? "pt-2 text-sm font-medium" : "text-muted-foreground pt-2 text-sm"}
+              >
                 {name}
               </span>
               <div className="grid gap-2">
-                {daySlots.length === 0 && <span className="text-muted-foreground pt-2 text-sm">Cerrado</span>}
+                {daySlots.length === 0 && <span className="text-muted-foreground pt-2 text-sm">No trabaja</span>}
                 {daySlots.map((slot, i) => {
                   const index = slots.indexOf(slot);
                   const error = errors.get(index);

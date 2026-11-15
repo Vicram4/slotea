@@ -48,23 +48,29 @@ export function StaffServicesEditor({ staff }: { staff: StaffMember }) {
         save.mutate(visible.filter((s) => selected.has(s.id)).map((s) => s.id));
       }}
     >
-      <fieldset className="grid gap-3" disabled={!canEdit}>
-        <legend className="sr-only">Servicios que hace {staff.displayName}</legend>
-        {visible.map((service) => (
-          <div key={service.id} className="flex items-center gap-3">
-            <Checkbox
-              id={`service-${service.id}`}
-              checked={selected.has(service.id)}
-              onCheckedChange={(checked) => toggle(service.id, checked === true)}
-              disabled={!canEdit}
-            />
-            <Label htmlFor={`service-${service.id}`} className="font-normal">
-              {service.name}
-              <span className="text-muted-foreground">· {formatDuration(service.durationMin)}</span>
-              {!service.active && <span className="text-muted-foreground">(desactivado)</span>}
-            </Label>
-          </div>
-        ))}
+      <fieldset className="grid gap-2" disabled={!canEdit}>
+        <legend className="text-muted-foreground mb-3 text-sm">
+          Solo se le podrá reservar lo que marques. {selected.size} de {visible.length} marcados.
+        </legend>
+        <div className="divide-y rounded-lg border">
+          {visible.map((service) => (
+            <div key={service.id} className="has-[:focus-visible]:bg-muted/50 flex items-center gap-3 px-4 py-3">
+              <Checkbox
+                id={`service-${service.id}`}
+                checked={selected.has(service.id)}
+                onCheckedChange={(checked) => toggle(service.id, checked === true)}
+                disabled={!canEdit}
+              />
+              <Label htmlFor={`service-${service.id}`} className="flex-1 font-normal">
+                {service.name}
+                {!service.active && <span className="text-muted-foreground">(desactivado)</span>}
+                <span className="text-muted-foreground ml-auto tabular-nums">
+                  {formatDuration(service.durationMin)}
+                </span>
+              </Label>
+            </div>
+          ))}
+        </div>
       </fieldset>
       {canEdit && (
         <div className="flex items-center justify-end gap-3">

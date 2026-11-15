@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { PageHeader } from "@/components/panel/page-header";
 import { ClosuresPanel } from "@/components/panel/schedule/closures-panel";
 
 export const metadata: Metadata = { title: "Cierres · Slotea" };
@@ -7,12 +8,10 @@ export const metadata: Metadata = { title: "Cierres · Slotea" };
 export default function Page() {
   return (
     <>
-      <header>
-        <h1 className="text-2xl font-semibold">Cierres</h1>
-        <p className="text-muted-foreground text-sm">
-          Días en que no se puede reservar: festivos, vacaciones del negocio y ausencias del equipo.
-        </p>
-      </header>
+      <PageHeader
+        title="Cierres"
+        description="Festivos, vacaciones del negocio y ausencias del equipo: los días en que no se puede reservar."
+      />
       <ClosuresPanel />
     </>
   );

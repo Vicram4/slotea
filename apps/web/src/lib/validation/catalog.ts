@@ -149,6 +149,18 @@ export function slotErrors(slots: readonly TimeSlot[]): Map<number, string> {
   return errors;
 }
 
+/**
+ * «5 días · 40 h a la semana»: lo que suma el horario. Ignora los tramos incompletos o al revés (el
+ * editor ya los marca como error) para que el resumen no salte mientras se escribe.
+ */
+export function weeklySummary(slots: readonly TimeSlot[]): string {
+  const valid = slots.filter((s) => TIME.test(s.start) && TIME.test(s.end) && toMinutes(s.end) > toMinutes(s.start));
+  if (valid.length === 0) return "Sin horario: no se le puede reservar";
+  const days = new Set(valid.map((s) => s.dayOfWeek)).size;
+  const minutes = valid.reduce((sum, s) => sum + toMinutes(s.end) - toMinutes(s.start), 0);
+  return `${days} ${days === 1 ? "día" : "días"} · ${formatDuration(minutes)} a la semana`;
+}
+
 // --- Cierres -----------------------------------------------------------------------------------
 
 export const closureSchema = z
@@ -167,10 +179,13 @@ export type ClosureValues = z.infer<typeof closureSchema>;
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-/** «2026-12-24», «2026-12-26» → «24 dic 2026 – 26 dic 2026» (un solo día: «24 dic 2026»). */
+/**
+ * «2026-12-24», «2026-12-26» → «24–26 dic 2026»: `formatRange` solo repite el mes y el año cuando
+ * cambian («28 nov – 2 dic 2026»). Un solo día: «24 dic 2026».
+ */
 export function formatDateRange(start: string, end: string): string {
-  const format = (iso: string) => dateFormat.format(new Date(`${iso}T00:00:00Z`));
-  return start === end ? format(start) : `${format(start)} – ${format(end)}`;
+  const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
+  return start === end ? dateFormat.format(day(start)) : dateFormat.formatRange(day(start), day(end));
 }
 
 /** Fecha local de hoy en ISO («2026-11-12»), sin pasar por UTC. */

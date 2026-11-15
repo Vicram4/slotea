@@ -97,8 +97,9 @@ describe("WeeklyHoursEditor", () => {
     ]);
     renderWithQuery(<WeeklyHoursEditor staffId={ana.id} />);
 
-    expect(await screen.findByText("09:00–14:00, 16:00–20:00")).toBeInTheDocument();
-    expect(screen.getAllByText("Cerrado")).toHaveLength(6);
+    expect(await screen.findByText("09:00–14:00 · 16:00–20:00")).toBeInTheDocument();
+    expect(screen.getAllByText("No trabaja")).toHaveLength(6);
+    expect(screen.getByText("1 día · 9 h a la semana")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Guardar horario" })).not.toBeInTheDocument();
   });
 });

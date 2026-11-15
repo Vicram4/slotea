@@ -10,6 +10,7 @@ import {
   todayIso,
   toServiceRequest,
   toServiceValues,
+  weeklySummary,
 } from "./catalog";
 
 describe("service form values", () => {
@@ -68,7 +69,10 @@ describe("service form values", () => {
     expect(formatDuration(60)).toBe("1 h");
     expect(formatDuration(90)).toBe("1 h 30 min");
     expect(formatDateRange("2026-12-24", "2026-12-24")).toBe("24 dic 2026");
-    expect(formatDateRange("2026-12-24", "2026-12-26")).toBe("24 dic 2026 – 26 dic 2026");
+    expect(formatDateRange("2026-12-24", "2026-12-26")).toBe("24–26 dic 2026");
+    // Intl separa con espacios finos (U+2009) cuando el rango tiene más de una parte.
+    expect(formatDateRange("2026-11-28", "2026-12-02")).toBe("28 nov – 2 dic 2026");
+    expect(formatDateRange("2026-12-28", "2027-01-03")).toBe("28 dic 2026 – 3 ene 2027");
   });
 
   it("uses the local date for today", () => {
@@ -101,6 +105,21 @@ describe("slotErrors", () => {
       3: "Completa la hora de inicio y de fin.",
       4: "Usa intervalos de 5 minutos.",
     });
+  });
+});
+
+describe("weeklySummary", () => {
+  it("adds up the days and hours of a split schedule", () => {
+    const slots = [1, 2, 3, 4, 5].flatMap((day) => [
+      { dayOfWeek: day, start: "09:00", end: "14:00" },
+      { dayOfWeek: day, start: "16:30", end: "20:00" },
+    ]);
+    expect(weeklySummary(slots)).toBe("5 días · 42 h 30 min a la semana");
+  });
+
+  it("ignores slots still being typed and says when there is no schedule", () => {
+    expect(weeklySummary([{ dayOfWeek: 6, start: "10:00", end: "" }])).toBe("Sin horario: no se le puede reservar");
+    expect(weeklySummary([{ dayOfWeek: 6, start: "10:00", end: "11:00" }])).toBe("1 día · 1 h a la semana");
   });
 });
 

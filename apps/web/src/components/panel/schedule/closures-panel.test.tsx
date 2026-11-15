@@ -40,7 +40,7 @@ describe("ClosuresPanel", () => {
 
     renderWithQuery(<ClosuresPanel />);
 
-    expect(await screen.findByText("24 dic 2026 – 26 dic 2026")).toBeInTheDocument();
+    expect(await screen.findByText("24–26 dic 2026")).toBeInTheDocument();
     expect(screen.getByText("Todo el negocio · Navidad")).toBeInTheDocument();
     expect(await within(screen.getByRole("list")).findByText("Ana")).toBeInTheDocument();
     expect(query?.get("from")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -109,7 +109,7 @@ describe("ClosuresPanel", () => {
     renderWithQuery(<ClosuresPanel />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Borrar cierre del 24 dic 2026 – 26 dic 2026" }),
+      await screen.findByRole("button", { name: "Borrar cierre del 24–26 dic 2026" }),
     );
 
     expect(await screen.findByText("No hay nada previsto.")).toBeInTheDocument();
