@@ -14,6 +14,7 @@ import com.slotea.schedule.ScheduleDtos.ClosureRequest;
 import com.slotea.schedule.ScheduleDtos.ClosureResponse;
 import com.slotea.schedule.ScheduleDtos.TimeSlot;
 import com.slotea.schedule.ScheduleDtos.WeeklyHours;
+import com.slotea.shared.security.Viewer;
 import com.slotea.shared.web.ApiException;
 
 /** Horarios y cierres del negocio de la petición. Ids de otro negocio → 404. */
@@ -23,6 +24,8 @@ class ScheduleService {
 
     /** Un cierre de más de un año seguramente es un error al escribir la fecha. */
     static final int MAX_CLOSURE_DAYS = 366;
+
+    static final String ONLY_OWN = "Solo puedes gestionar tus propias ausencias.";
 
     private final WorkingHoursRepository hours;
     private final ClosureRepository closures;
@@ -70,10 +73,11 @@ class ScheduleService {
     }
 
     @Transactional
-    ClosureResponse createClosure(ClosureRequest r) {
+    ClosureResponse createClosure(Viewer viewer, ClosureRequest r) {
         if (r.staffId() != null) {
             staff.require(r.staffId());
         }
+        requireCanManage(viewer, r.staffId());
         if (r.endDate().isBefore(r.startDate())) {
             throw ApiException.invalidField("endDate", "debe ser igual o posterior a la fecha de inicio");
         }
@@ -86,8 +90,25 @@ class ScheduleService {
     }
 
     @Transactional
-    void deleteClosure(UUID id) {
+    void deleteClosure(Viewer viewer, UUID id) {
         Closure closure = closures.findById(id).orElseThrow(() -> ApiException.notFound("No existe ese cierre."));
+        requireCanManage(viewer, closure.getStaffId());
         closures.delete(closure);
+    }
+
+    /**
+     * El dueño gestiona todos los cierres. Un empleado, solo las ausencias de su propia ficha (los ve
+     * todos: por eso es 403 y no 404).
+     */
+    private void requireCanManage(Viewer viewer, @Nullable UUID closureStaffId) {
+        if (viewer.owner()) {
+            return;
+        }
+        boolean own = closureStaffId != null && staff.linkedTo(viewer.userId())
+                .map(s -> s.getId().equals(closureStaffId))
+                .orElse(false);
+        if (!own) {
+            throw ApiException.forbidden(ONLY_OWN);
+        }
     }
 }

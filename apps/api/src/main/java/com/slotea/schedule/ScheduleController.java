@@ -10,6 +10,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,12 +25,16 @@ import org.springframework.web.bind.annotation.RestController;
 import com.slotea.schedule.ScheduleDtos.ClosureRequest;
 import com.slotea.schedule.ScheduleDtos.ClosureResponse;
 import com.slotea.schedule.ScheduleDtos.WeeklyHours;
+import com.slotea.shared.security.Viewer;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
-/** Horario semanal de cada profesional y cierres. STAFF los ve; solo OWNER los cambia. */
+/**
+ * Horario semanal de cada profesional y cierres. STAFF los ve; solo OWNER cambia horarios y cierres
+ * del negocio. Un empleado gestiona sus propias ausencias.
+ */
 @Tag(name = "schedule")
 @RestController
 @RequestMapping("/api/v1")
@@ -63,19 +69,21 @@ class ScheduleController {
         return schedule.closures(staffId, from, to);
     }
 
-    @Operation(summary = "Crear un cierre del negocio o una ausencia de un profesional (solo el dueño)")
+    @Operation(summary = "Crear un cierre del negocio o una ausencia de un profesional. "
+            + "Un empleado solo puede crear sus propias ausencias")
     @PostMapping("/closures")
-    @PreAuthorize("hasRole('OWNER')")
-    ResponseEntity<ClosureResponse> createClosure(@Valid @RequestBody ClosureRequest request) {
-        ClosureResponse created = schedule.createClosure(request);
+    @PreAuthorize("hasRole('STAFF')")
+    ResponseEntity<ClosureResponse> createClosure(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody ClosureRequest request) {
+        ClosureResponse created = schedule.createClosure(Viewer.of(jwt), request);
         return ResponseEntity.created(URI.create("/api/v1/closures/" + created.id())).body(created);
     }
 
-    @Operation(summary = "Borrar un cierre (solo el dueño)")
+    @Operation(summary = "Borrar un cierre. Un empleado solo puede borrar sus propias ausencias")
     @DeleteMapping("/closures/{id}")
-    @PreAuthorize("hasRole('OWNER')")
-    ResponseEntity<Void> deleteClosure(@PathVariable UUID id) {
-        schedule.deleteClosure(id);
+    @PreAuthorize("hasRole('STAFF')")
+    ResponseEntity<Void> deleteClosure(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        schedule.deleteClosure(Viewer.of(jwt), id);
         return ResponseEntity.noContent().build();
     }
 }
