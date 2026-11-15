@@ -33,14 +33,23 @@ public class PingController {
     public PingResponse ping(HttpServletRequest request) {
         String diag = request.getHeader("X-Slotea-Diag");
         if (diag != null) {
-            String xff = request.getHeader("X-Forwarded-For");
+            // ForwardedHeaderFilter (forward-headers-strategy: framework) oculta X-Forwarded-For: se lee
+            // la petición original que envuelve.
+            jakarta.servlet.ServletRequest raw = request;
+            while (raw instanceof jakarta.servlet.ServletRequestWrapper wrapper) {
+                raw = wrapper.getRequest();
+            }
+            var rawRequest = (HttpServletRequest) raw;
+            String xff = rawRequest.getHeader("X-Forwarded-For");
             List<String> hops = xff == null ? List.of()
                     : Arrays.stream(xff.split(",")).map(String::strip).toList();
-            String realIp = request.getHeader("X-Real-IP");
-            log.info("client-ip diag={} xffEntries={} realIpPresent={} realIpIndexFromRight={} remoteAddrInXff={}",
-                    diag.replaceAll("[^a-z0-9-]", ""), hops.size(), realIp != null,
-                    realIp == null ? -1 : hops.size() - 1 - hops.lastIndexOf(realIp.strip()),
-                    hops.contains(request.getRemoteAddr()));
+            String realIp = rawRequest.getHeader("X-Real-IP");
+            log.info("client-ip diag={} xffEntries={} spoofIndex={} realIpIndex={} realIpIsSpoof={} "
+                    + "remoteAddrIsSpoof={} rawRemoteAddrIndex={}",
+                    diag.replaceAll("[^a-z0-9-]", ""), hops.size(), hops.indexOf("203.0.113.7"),
+                    realIp == null ? -2 : hops.indexOf(realIp.strip()),
+                    realIp != null && realIp.startsWith("203.0.113."),
+                    request.getRemoteAddr().equals("203.0.113.7"), hops.indexOf(rawRequest.getRemoteAddr()));
         }
         return new PingResponse("ok", "slotea-api", Instant.now(clock));
     }
