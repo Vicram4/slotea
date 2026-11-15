@@ -37,6 +37,9 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Next 16 + `cacheComponents`: `usePathname()` en un componente cliente bloquea el prerender de rutas con parámetros → envuélvelo en `Suspense` (ver `PanelShell`).
 - Vitest/jsdom: Radix necesita `ResizeObserver` (stub en `vitest.setup.ts`). Para nombres accesibles de botones con icono, usa `aria-label`, no `<span class="sr-only">`.
 - MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
+- Emails: se encolan en `email_outbox` **dentro** de la transacción del cambio y se envían con `EmailOutbox.sendNow` **después** del commit (nunca en `AFTER_COMMIT` ni en segundo plano: ver `docs/fase-7-emails.md`). No reactives el health de mail.
+- Mailpit necesita `MP_SMTP_DISABLE_RDNS` y JavaMail, `mail.smtp.localhost` + `mail.from`: sin ellos, cada envío tarda 10 s o más (DNS).
+- El token del enlace de la cita es un HMAC del id (`AppointmentLinks`): el id de `Appointment` lo genera la aplicación (`Appointment.newId()`), no Hibernate.
 - Ante la duda, **lee la documentación de la versión instalada** antes de escribir código.
 
 ## Arquitectura
@@ -67,6 +70,7 @@ Requisitos: JDK 25, Node 26 (`.node-version`, con fnm), pnpm, Docker. Primera ve
 - API: `cd apps/api` → `./mvnw spring-boot:run` (arranca) · `./mvnw verify` (tests, necesita Docker)
 - Web: `cd apps/web` → `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build`
 - Contrato tras cambiar la API: `./mvnw test -Dtest=OpenApiContractTests -Dopenapi.update=true` (en `apps/api`) y luego `pnpm api:types` (en `apps/web`).
+- Mailpit (emails en local): http://localhost:8025 · Job de reintentos: `POST /internal/jobs/outbox` con la cabecera `X-Jobs-Token`.
 - Swagger UI (local): `http://localhost:<PORT>/swagger-ui.html` · OpenAPI: `/v3/api-docs`
 - En este equipo los puertos son 5433 (BD) y 8081 (API) porque 5432/8080 los usa otro proyecto; se cambian en `.env`.
 - Herramienta Bash de Claude: el `.bashrc` redefine `cd` (fnm); usar `builtin cd`. Para Node, mejor PowerShell con `$env:APPDATA\fnm\node-versions\v26.13.1\installation` en el `PATH`.
