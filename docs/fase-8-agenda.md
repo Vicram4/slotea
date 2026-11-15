@@ -44,7 +44,7 @@ Cuando **el cliente** reserva, cambia o cancela, el negocio recibe un email en s
 - **Reply-To = el cliente:** si el negocio responde, le escribe a él.
 - Llevan un botón a **la agenda de ese día** (`/panel/agenda?date=…`), nunca el enlace de gestión del cliente.
 - Lo que hace el propio negocio desde el panel no le genera aviso.
-- Los **negocios de demostración** (`is_demo`, fase 9) no reciben avisos: su email es ficticio y los rebotes perjudican la reputación del remitente en Brevo.
+- Los **negocios de demostración** (`is_demo`) no envían ningún email, ni avisos ni los del cliente: se quedan en la bandeja de la demo (ver [fase 9](fase-9-demo.md)).
 
 `AppointmentNotifications` reúne «qué emails genera cada cambio»: lo usan la reserva, el enlace del cliente y la agenda.
 
