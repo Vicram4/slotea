@@ -147,6 +147,17 @@ public class Appointment {
     }
 
     /**
+     * Cómo acabó una cita que ya ha empezado: {@code COMPLETED}, {@code NO_SHOW}, o {@code CONFIRMED} para
+     * deshacer un error. Las reglas (que haya empezado, que no esté cancelada) las comprueba el servicio.
+     */
+    void recordOutcome(AppointmentStatus outcome) {
+        if (status == AppointmentStatus.CANCELLED || outcome == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Cancelling is not an outcome");
+        }
+        this.status = outcome;
+    }
+
+    /**
      * Mueve la cita (misma fila, mismo id y, por tanto, mismo enlace). Que el nuevo hueco esté libre
      * lo comprueba la restricción de la BD al hacer flush.
      */

@@ -32,6 +32,11 @@ public class ApiException extends ErrorResponseException {
         return new ApiException(HttpStatus.UNAUTHORIZED, detail);
     }
 
+    /** Tiene sesión y el recurso es visible para él, pero no puede hacer eso con él. */
+    public static ApiException forbidden(String detail) {
+        return new ApiException(HttpStatus.FORBIDDEN, detail);
+    }
+
     /** También para recursos de otro negocio: no revelamos que existen. */
     public static ApiException notFound(String detail) {
         return new ApiException(HttpStatus.NOT_FOUND, detail);

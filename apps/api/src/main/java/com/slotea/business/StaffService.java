@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -91,6 +92,14 @@ public class StaffService {
     /** Para otros módulos (horarios, cierres): el profesional del negocio actual, o 404. */
     public StaffMember require(UUID id) {
         return staff.findById(id).orElseThrow(() -> ApiException.notFound("No existe ese profesional."));
+    }
+
+    /**
+     * La ficha de profesional del usuario de la sesión, si el dueño la ha enlazado. Es lo que limita lo
+     * que ve y cambia un empleado: su agenda y sus ausencias.
+     */
+    public Optional<StaffMember> linkedTo(UUID userId) {
+        return staff.findByUserId(userId);
     }
 
     private StaffResponse response(StaffMember member) {

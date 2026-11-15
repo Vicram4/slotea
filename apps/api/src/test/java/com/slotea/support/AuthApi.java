@@ -66,8 +66,16 @@ public final class AuthApi {
                 UUID.fromString(JsonPath.read(body, "$.user.id")), email, sessionOf(result));
     }
 
+    /** Un empleado con su sesión (y su id, para enlazarlo a una ficha de profesional). */
+    public record StaffUser(UUID userId, Session session) {
+    }
+
     /** Crea un empleado directamente en la BD (aún no hay endpoint de invitación) e inicia sesión. */
     public Session addStaff(Tenant tenant, String name) {
+        return addStaffUser(tenant, name).session();
+    }
+
+    public StaffUser addStaffUser(Tenant tenant, String name) {
         String email = unique(name) + "@example.test";
         UUID userId = UUID.randomUUID();
         jdbc.sql("INSERT INTO app_user (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)")
@@ -76,7 +84,7 @@ public final class AuthApi {
         jdbc.sql("INSERT INTO membership (id, business_id, user_id, role, created_at) VALUES (?, ?, ?, 'STAFF', ?)")
                 .params(UUID.randomUUID(), tenant.businessId(), userId, java.sql.Timestamp.from(Instant.now()))
                 .update();
-        return login(email, PASSWORD);
+        return new StaffUser(userId, login(email, PASSWORD));
     }
 
     public Session login(String email, String password) {

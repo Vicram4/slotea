@@ -25,6 +25,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
             """)
     List<Appointment> findBlocking(Collection<UUID> staffIds, Instant from, Instant to);
 
+    /** La agenda: citas que empiezan en [from, to), canceladas incluidas. */
+    @Query("""
+            select a from Appointment a
+            where a.startsAt >= :from and a.startsAt < :to
+            order by a.startsAt, a.id
+            """)
+    List<Appointment> findStartingBetween(Instant from, Instant to);
+
+    /** La agenda de un profesional. */
+    @Query("""
+            select a from Appointment a
+            where a.staffId = :staffId and a.startsAt >= :from and a.startsAt < :to
+            order by a.startsAt, a.id
+            """)
+    List<Appointment> findStartingBetweenForStaff(UUID staffId, Instant from, Instant to);
+
     /** La cita del enlace de gestión, dentro del negocio de la petición (el del slug). */
     Optional<Appointment> findByManageTokenHash(byte[] manageTokenHash);
 }

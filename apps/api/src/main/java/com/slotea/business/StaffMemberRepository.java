@@ -1,6 +1,7 @@
 package com.slotea.business;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,7 @@ public interface StaffMemberRepository extends JpaRepository<StaffMember, UUID> 
 
     @Query("select s from StaffMember s order by s.active desc, lower(s.displayName), s.id")
     List<StaffMember> findAllOrdered();
+
+    /** La ficha de profesional de un miembro del panel (como mucho una por negocio). */
+    Optional<StaffMember> findByUserId(UUID userId);
 }
