@@ -10,7 +10,14 @@ import { FormField } from "@/components/forms/form-field";
 import { applyServerErrors } from "@/components/forms/server-errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useCanEdit, useClosures, useCreateClosure, useDeleteClosure, useStaff } from "@/lib/catalog";
+import {
+  useCanEdit,
+  useClosures,
+  useCreateClosure,
+  useDeleteClosure,
+  useOwnStaffId,
+  useStaff,
+} from "@/lib/catalog";
 import { closureSchema, formatDateRange, todayIso, type ClosureValues } from "@/lib/validation/catalog";
 
 const FIELDS = ["staffId", "startDate", "endDate", "reason"] as const;
@@ -18,9 +25,16 @@ const FIELDS = ["staffId", "startDate", "endDate", "reason"] as const;
 /**
  * Próximos cierres (de hoy en adelante). Sin `staffId`: los de todo el negocio y las ausencias de
  * cada profesional. Con `staffId`: solo las ausencias de ese profesional.
+ *
+ * El dueño lo gestiona todo; un empleado, solo sus propias ausencias (el resto, en solo lectura).
  */
 export function ClosuresPanel({ staffId }: { staffId?: string }) {
-  const canEdit = useCanEdit();
+  const isOwner = useCanEdit();
+  const ownStaffId = useOwnStaffId();
+  // El empleado añade ausencias para sí mismo: en su ficha o en la página de cierres, nunca en la de otro.
+  const formStaffId = isOwner ? staffId : ownStaffId && (!staffId || staffId === ownStaffId) ? ownStaffId : null;
+  const canDelete = (closureStaffId: string | null | undefined) =>
+    isOwner || (!!ownStaffId && closureStaffId === ownStaffId);
   const [today] = useState(todayIso);
   const closures = useClosures({ staffId, from: today });
   const staff = useStaff();
@@ -32,7 +46,7 @@ export function ClosuresPanel({ staffId }: { staffId?: string }) {
 
   return (
     <div className="grid gap-6">
-      {canEdit && <ClosureForm staffId={staffId} />}
+      {formStaffId !== null && <ClosureForm staffId={formStaffId} />}
       <section className="grid gap-3" aria-labelledby="closures-title">
         <h2 id="closures-title" className="font-medium">
           {staffId ? "Próximas ausencias" : "Próximos cierres"}
@@ -63,7 +77,7 @@ export function ClosuresPanel({ staffId }: { staffId?: string }) {
                       {closure.reason}
                     </span>
                   </div>
-                  {canEdit && (
+                  {canDelete(closure.staffId) && (
                     <Button
                       variant="ghost"
                       size="icon"

@@ -115,7 +115,7 @@ describe("ClosuresPanel", () => {
     expect(await screen.findByText("No hay nada previsto.")).toBeInTheDocument();
   });
 
-  it("filters by professional and is read-only for staff", async () => {
+  it("filters by professional and is read-only for staff who are not that professional", async () => {
     let query: URLSearchParams | undefined;
     server.use(
       http.get("/api/v1/me", () => HttpResponse.json(staffMe)),
@@ -133,5 +133,35 @@ describe("ClosuresPanel", () => {
     expect(query?.get("staffId")).toBe(ana.id);
     expect(screen.queryByRole("button", { name: "Añadir" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Borrar/ })).not.toBeInTheDocument();
+  });
+
+  it("lets an employee add and delete only their own absences", async () => {
+    const mine = { ...ana, id: "0193a1b2-0000-7000-8000-00000000a002", displayName: "Luis", userId: staffMe.user.id };
+    let body: unknown;
+    let closures: Closure[] = [christmas, { ...christmas, id: "d-ana", staffId: ana.id, reason: "Curso" }];
+    server.use(
+      http.get("/api/v1/me", () => HttpResponse.json(staffMe)),
+      http.get("/api/v1/staff", () => HttpResponse.json([ana, mine])),
+      http.get("/api/v1/closures", () => HttpResponse.json(closures)),
+      http.post("/api/v1/closures", async ({ request }) => {
+        body = await request.json();
+        closures = [...closures, { ...christmas, id: "d-mine", staffId: mine.id, reason: "Médico" }];
+        return HttpResponse.json(closures.at(-1), { status: 201 });
+      }),
+    );
+    renderWithQuery(<ClosuresPanel />);
+
+    // Sin selector «Afecta a»: la ausencia es suya.
+    await screen.findByRole("heading", { name: "Añadir una ausencia" });
+    expect(screen.queryByLabelText("Afecta a")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Desde"), "2026-12-24");
+    await userEvent.type(screen.getByLabelText("Hasta (incluido)"), "2026-12-26");
+    await userEvent.type(screen.getByLabelText("Motivo (opcional)"), "Médico");
+    await userEvent.click(screen.getByRole("button", { name: "Añadir" }));
+
+    expect(await screen.findByText("Luis · Médico")).toBeInTheDocument();
+    expect(body).toEqual({ staffId: mine.id, startDate: "2026-12-24", endDate: "2026-12-26", reason: "Médico" });
+    // Solo puede borrar la suya: ni el cierre del negocio ni la ausencia de Ana.
+    expect(screen.getAllByRole("button", { name: /Borrar/ })).toHaveLength(1);
   });
 });

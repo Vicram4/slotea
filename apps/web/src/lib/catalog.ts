@@ -31,6 +31,16 @@ export function useCanEdit(): boolean {
   return useMe().data?.activeBusiness?.role === "OWNER";
 }
 
+/**
+ * La ficha de profesional del usuario de la sesión, si el dueño la ha enlazado. Un empleado puede
+ * gestionar las ausencias de esa ficha (y solo esas: la API lo comprueba).
+ */
+export function useOwnStaffId(): string | undefined {
+  const userId = useMe().data?.user.id;
+  const staff = useStaff();
+  return staff.data?.find((s) => s.userId === userId)?.id;
+}
+
 // --- Servicios ---------------------------------------------------------------------------------
 
 export function useServices() {
