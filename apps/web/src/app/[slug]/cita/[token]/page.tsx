@@ -16,11 +16,13 @@ export const metadata: Metadata = {
 
 export default function Page({ params }: PageProps<"/[slug]/cita/[token]">) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-6 py-10">
-      {/* Con cacheComponents, `params` es un dato de la petición: se espera dentro de un Suspense. */}
-      <Suspense fallback={<p role="status">Cargando…</p>}>
-        <ManageRoute params={params} />
-      </Suspense>
+    <main className="bg-muted/50 flex min-h-dvh flex-col gap-8 px-4 py-8 sm:px-6 sm:py-16">
+      <div className="mx-auto grid w-full max-w-4xl gap-4">
+        {/* Con cacheComponents, `params` es un dato de la petición: se espera dentro de un Suspense. */}
+        <Suspense fallback={<p role="status">Cargando…</p>}>
+          <ManageRoute params={params} />
+        </Suspense>
+      </div>
       <footer className="text-muted-foreground mt-auto text-center text-xs">
         Reservas con{" "}
         <Link href="/" className="underline-offset-4 hover:underline">

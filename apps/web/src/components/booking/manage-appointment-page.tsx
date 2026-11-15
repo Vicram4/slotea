@@ -1,14 +1,12 @@
 "use client";
 
-import { CalendarClock, CalendarX } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarX, Clock, IdCard, User } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { SelectField } from "@/components/forms/fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
@@ -30,8 +28,9 @@ import {
   useRescheduleAppointment,
 } from "@/lib/booking";
 import { useBrandColor } from "@/lib/brand";
-import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, todayIn } from "@/lib/dates";
+import { addDays, formatLongDate, isOtherTimeZone, type IsoDate, shortDay, todayIn } from "@/lib/dates";
 
+import { PublicSheet, StaffChoice, StepHeading, SummaryItem, SummaryList } from "./public-sheet";
 import { TimePicker } from "./time-picker";
 
 const STATUS: Record<ManagedAppointment["status"], { label: string; variant: "default" | "secondary" | "destructive" }> =
@@ -70,34 +69,18 @@ export function ManageAppointmentPage({ slug, token }: { slug: string; token: st
 
   const data = appointment.data;
   return (
-    <>
-      <header className="grid gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">{business.data.name}</h1>
-        <p className="text-muted-foreground">Tu cita</p>
-      </header>
-
+    <PublicSheet
+      business={business.data}
+      tagline="Tu cita. Cámbiala o cancélala desde aquí, sin llamar."
+      aside={<AppointmentSummary appointment={data} />}
+    >
       {notice && (
         <Alert role="status">
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
       )}
 
-      <AppointmentCard appointment={data} />
-
-      {data.status === "CANCELLED" && (
-        <Button asChild className="justify-self-start">
-          <Link href={`/${slug}`}>Reservar otra cita</Link>
-        </Button>
-      )}
-      {data.status === "CONFIRMED" && !data.changeable && (
-        <Alert>
-          <AlertDescription>
-            Falta poco para tu cita: ya no se puede cambiar ni cancelar desde aquí. Si lo necesitas, contacta con{" "}
-            {business.data.name}.
-          </AlertDescription>
-        </Alert>
-      )}
-      {data.changeable && (
+      {data.changeable ? (
         <ChangeActions
           slug={slug}
           token={token}
@@ -105,38 +88,77 @@ export function ManageAppointmentPage({ slug, token }: { slug: string; token: st
           appointment={data}
           onDone={(message) => setNotice(message)}
         />
+      ) : (
+        <ClosedAppointment slug={slug} business={business.data} appointment={data} />
       )}
-    </>
+    </PublicSheet>
   );
 }
 
-function AppointmentCard({ appointment }: { appointment: ManagedAppointment }) {
+function AppointmentSummary({ appointment }: { appointment: ManagedAppointment }) {
   const status = STATUS[appointment.status];
+  const struck = appointment.status === "CANCELLED" ? "line-through" : undefined;
+  return (
+    <SummaryList label="Tu cita">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <dt className="sr-only">Servicio</dt>
+        <dd className="text-base font-medium">{appointment.serviceName}</dd>
+        <dt className="sr-only">Estado</dt>
+        <dd>
+          <Badge variant={status.variant}>{status.label}</Badge>
+        </dd>
+      </div>
+      <SummaryItem icon={CalendarDays} label="Día" className={struck}>
+        {formatLongDate(appointment.date)}
+      </SummaryItem>
+      <SummaryItem icon={Clock} label="Hora" className={struck}>
+        {appointment.time} – {appointment.endTime}
+        {isOtherTimeZone(appointment.timezone) && ` (${appointment.timezone})`}
+      </SummaryItem>
+      <SummaryItem icon={User} label="Profesional">
+        {appointment.staffName}
+      </SummaryItem>
+      <SummaryItem icon={IdCard} label="A nombre de">
+        {appointment.customerName}
+      </SummaryItem>
+    </SummaryList>
+  );
+}
+
+/** Lo que queda cuando ya no se puede tocar: por qué, y qué hacer. */
+function ClosedAppointment({
+  slug,
+  business,
+  appointment,
+}: {
+  slug: string;
+  business: PublicBusiness;
+  appointment: ManagedAppointment;
+}) {
+  if (appointment.status === "CONFIRMED") {
+    return (
+      <section aria-labelledby="closed-title" className="grid gap-2">
+        <StepHeading id="closed-title">Ya casi es la hora</StepHeading>
+        <p className="text-muted-foreground text-sm">
+          Falta poco para tu cita: ya no se puede cambiar ni cancelar desde aquí. Si lo necesitas, contacta con{" "}
+          {business.name}.
+        </p>
+      </section>
+    );
+  }
   const cancelled = appointment.status === "CANCELLED";
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
-        <CardTitle className="text-xl">{appointment.serviceName}</CardTitle>
-        <Badge variant={status.variant}>{status.label}</Badge>
-      </CardHeader>
-      <CardContent>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">A nombre de</dt>
-          <dd className="font-medium">{appointment.customerName}</dd>
-          <dt className="text-muted-foreground">Profesional</dt>
-          <dd className="font-medium">{appointment.staffName}</dd>
-          <dt className="text-muted-foreground">Día</dt>
-          <dd className={cancelled ? "line-through" : "font-medium first-letter:uppercase"}>
-            {formatLongDate(appointment.date)}
-          </dd>
-          <dt className="text-muted-foreground">Hora</dt>
-          <dd className={cancelled ? "line-through" : "font-medium"}>
-            {appointment.time} – {appointment.endTime}
-            {isOtherTimeZone(appointment.timezone) && ` (${appointment.timezone})`}
-          </dd>
-        </dl>
-      </CardContent>
-    </Card>
+    <section aria-labelledby="closed-title" className="grid gap-4">
+      <StepHeading
+        id="closed-title"
+        hint={cancelled ? "El hueco ya está libre para otra persona." : "¿Te reservamos la siguiente?"}
+      >
+        {cancelled ? "Esta cita está cancelada" : "Esta cita ya pasó"}
+      </StepHeading>
+      <Button asChild className="justify-self-start">
+        <Link href={`/${slug}`}>Reservar otra cita</Link>
+      </Button>
+    </section>
   );
 }
 
@@ -175,16 +197,21 @@ function ChangeActions({
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <Button variant={rescheduling ? "secondary" : "default"} onClick={() => setRescheduling((r) => !r)}>
-          <CalendarClock aria-hidden />
-          {rescheduling ? "No cambiar la hora" : "Cambiar hora"}
-        </Button>
-        <Button variant="outline" onClick={() => setConfirmCancel(true)}>
-          <CalendarX aria-hidden />
-          Cancelar cita
-        </Button>
-      </div>
+      <section aria-labelledby="actions-title" className="grid gap-4">
+        <StepHeading id="actions-title" hint="Cambia la hora o cancela en un momento. No hace falta llamar.">
+          ¿Te ha surgido algo?
+        </StepHeading>
+        <div className="flex flex-wrap gap-2">
+          <Button variant={rescheduling ? "secondary" : "default"} onClick={() => setRescheduling((r) => !r)}>
+            <CalendarClock aria-hidden />
+            {rescheduling ? "No cambiar la hora" : "Cambiar hora"}
+          </Button>
+          <Button variant="outline" onClick={() => setConfirmCancel(true)}>
+            <CalendarX aria-hidden />
+            Cancelar cita
+          </Button>
+        </div>
+      </section>
 
       {rescheduling && (
         <Reschedule
@@ -253,6 +280,9 @@ function Reschedule({
   const staffForService = business.staff.filter((s) => s.serviceIds.includes(appointment.serviceId));
   // Si el profesional ya no está disponible para reservas, que pueda elegir otro sin perderlo de la lista.
   const currentMissing = !staffForService.some((s) => s.id === appointment.staffId);
+  const staffOptions = currentMissing
+    ? [{ id: appointment.staffId, displayName: appointment.staffName }, ...staffForService]
+    : staffForService;
 
   const onConfirm = async () => {
     if (!slot) return;
@@ -270,26 +300,27 @@ function Reschedule({
   };
 
   return (
-    <section ref={section} aria-labelledby="reschedule-title" className="grid gap-4" tabIndex={-1}>
-      <h2 id="reschedule-title" className="text-lg font-semibold">
-        Elige la nueva hora
-      </h2>
-      <SelectField
-        label="Profesional"
-        value={staffId}
-        onChange={(e) => {
-          setStaffId(e.target.value);
-          setSlot(null);
-        }}
-      >
-        <option value="">Cualquier profesional</option>
-        {currentMissing && <option value={appointment.staffId}>{appointment.staffName}</option>}
-        {staffForService.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.displayName}
-          </option>
-        ))}
-      </SelectField>
+    <section ref={section} aria-labelledby="reschedule-title" className="grid gap-6 outline-none" tabIndex={-1}>
+      <StepHeading id="reschedule-title" hint="Tu hora actual sigue siendo tuya hasta que confirmes la nueva.">
+        ¿Cuándo te viene mejor?
+      </StepHeading>
+      {/* Con una sola persona que haga el servicio, no hay nada que elegir. */}
+      {staffOptions.length > 1 && (
+        <div className="grid gap-2">
+          <p id="reschedule-staff" className="text-sm font-medium">
+            ¿Con quién?
+          </p>
+          <StaffChoice
+            labelledBy="reschedule-staff"
+            staff={staffOptions}
+            value={staffId}
+            onChange={(id) => {
+              setStaffId(id);
+              setSlot(null);
+            }}
+          />
+        </div>
+      )}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -318,14 +349,11 @@ function Reschedule({
         }}
       />
       {slot && date && (
-        <div className="grid gap-3">
-          <p className="bg-muted rounded-md p-3 text-sm first-letter:uppercase">
-            {formatLongDate(date)} a las {slot.time}
-          </p>
-          <Button onClick={onConfirm} disabled={reschedule.isPending} className="justify-self-start">
-            {reschedule.isPending ? "Cambiando…" : "Confirmar el cambio"}
-          </Button>
-        </div>
+        <Button size="lg" onClick={onConfirm} disabled={reschedule.isPending}>
+          {reschedule.isPending
+            ? "Cambiando…"
+            : `Cambiar a: ${shortDay(date).weekday} ${shortDay(date).dayMonth}, ${slot.time}`}
+        </Button>
       )}
     </section>
   );

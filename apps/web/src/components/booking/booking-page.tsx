@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarDays, Check, Clock, type LucideIcon, User, Wallet } from "lucide-react";
+import { CalendarDays, Check, Clock, User, Wallet } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
 
 import { FormField } from "@/components/forms/form-field";
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { customerSchema, type CustomerData, type CustomerValues } from "@/lib/validation/booking";
 import { formatDuration, formatPrice } from "@/lib/validation/catalog";
 
+import { PublicSheet, StaffChoice, StepHeading, SummaryItem, SummaryList } from "./public-sheet";
 import { TimePicker } from "./time-picker";
 
 /** Página pública de reservas de un negocio: servicio → profesional → día y hora → datos. */
@@ -64,6 +65,7 @@ export function BookingPage({ slug }: { slug: string }) {
 }
 
 const FIELDS = ["fullName", "email", "phone", "notes"] as const;
+const TAGLINE = "Elige servicio, día y hora. Sin llamadas ni esperas.";
 
 function BookingFlow({
   slug,
@@ -106,16 +108,17 @@ function BookingFlow({
 
   if (business.services.length === 0) {
     return (
-      <BookingShell business={business}>
+      <PublicSheet business={business} tagline={TAGLINE}>
         <p className="text-muted-foreground">Este negocio todavía no tiene la agenda abierta online.</p>
-      </BookingShell>
+      </PublicSheet>
     );
   }
 
   return (
-    <BookingShell
+    <PublicSheet
       business={business}
-      summary={
+      tagline={TAGLINE}
+      aside={
         service && (
           <BookingSummary
             service={service}
@@ -172,31 +175,15 @@ function BookingFlow({
           <StepHeading id="step-staff" hint="Si te da igual, te enseñamos los huecos de todo el equipo.">
             ¿Con quién?
           </StepHeading>
-          <div role="radiogroup" aria-labelledby="step-staff" className="flex flex-wrap gap-2">
-            {[{ id: "", displayName: "Me da igual" }, ...staffForService].map((s) => (
-              <label
-                key={s.id}
-                className={cn(
-                  "cursor-pointer rounded-full border px-4 py-1.5 text-sm",
-                  "has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:ring-[3px]",
-                  s.id === staffId ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted/60",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="staff"
-                  value={s.id}
-                  checked={s.id === staffId}
-                  onChange={() => {
-                    setStaffId(s.id);
-                    resetTime();
-                  }}
-                  className="sr-only"
-                />
-                {s.displayName}
-              </label>
-            ))}
-          </div>
+          <StaffChoice
+            labelledBy="step-staff"
+            staff={staffForService}
+            value={staffId}
+            onChange={(id) => {
+              setStaffId(id);
+              resetTime();
+            }}
+          />
         </section>
       )}
 
@@ -254,56 +241,7 @@ function BookingFlow({
           }}
         />
       )}
-    </BookingShell>
-  );
-}
-
-/** La ficha de reserva: el negocio (y lo elegido hasta ahora) a la izquierda, los pasos a la derecha. */
-function BookingShell({
-  business,
-  summary,
-  children,
-}: {
-  business: PublicBusiness;
-  summary?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <>
-      {business.demo && <DemoNotice />}
-      <div className="bg-background grid overflow-hidden rounded-xl border shadow-xs md:grid-cols-[17rem_1fr]">
-        <aside className="border-b p-6 md:border-r md:border-b-0">
-          {/* En escritorio, el resumen acompaña al bajar hasta el formulario. */}
-          <div className="grid gap-6 md:sticky md:top-8">
-          <header className="grid gap-4">
-            <span
-              aria-hidden
-              className="bg-primary text-primary-foreground grid size-10 place-items-center rounded-lg text-lg font-semibold"
-            >
-              {business.name.trim().charAt(0).toUpperCase()}
-            </span>
-            <div className="grid gap-1">
-              <h1 className="text-xl font-semibold tracking-tight">{business.name}</h1>
-              <p className="text-muted-foreground text-sm">Elige servicio, día y hora. Sin llamadas ni esperas.</p>
-            </div>
-          </header>
-          {summary}
-          </div>
-        </aside>
-        <div className="grid content-start gap-10 p-6 md:p-8">{children}</div>
-      </div>
-    </>
-  );
-}
-
-function StepHeading({ id, hint, children }: { id: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-1">
-      <h2 id={id} className="font-semibold">
-        {children}
-      </h2>
-      {hint && <p className="text-muted-foreground text-sm">{hint}</p>}
-    </div>
+    </PublicSheet>
   );
 }
 
@@ -318,7 +256,7 @@ function BookingSummary({
   when: string | null;
 }) {
   return (
-    <dl aria-label="Tu reserva" className="grid gap-2.5 border-t pt-6 text-sm">
+    <SummaryList label="Tu reserva">
       <div>
         <dt className="sr-only">Servicio</dt>
         <dd className="text-base font-medium">{service.name}</dd>
@@ -339,40 +277,7 @@ function BookingSummary({
           {when}
         </SummaryItem>
       )}
-    </dl>
-  );
-}
-
-function SummaryItem({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
-  return (
-    <div className="text-muted-foreground flex items-start gap-2">
-      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <dt className="sr-only">{label}</dt>
-      <dd className="first-letter:uppercase">{children}</dd>
-    </div>
-  );
-}
-
-/** En una copia de la demo: aquí se juega el papel del cliente, y los emails van a la bandeja. */
-function DemoNotice() {
-  return (
-    <div
-      role="note"
-      className="bg-background flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-3 text-sm"
-    >
-      <p>
-        <strong className="font-medium">Demo:</strong> estás reservando como cliente. No sale ningún email: lo verás
-        en la bandeja de la demo.
-      </p>
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" asChild>
-          <Link href="/panel/bandeja">Bandeja de la demo</Link>
-        </Button>
-        <Button size="sm" variant="ghost" asChild>
-          <Link href="/panel/agenda">Volver al panel</Link>
-        </Button>
-      </div>
-    </div>
+    </SummaryList>
   );
 }
 

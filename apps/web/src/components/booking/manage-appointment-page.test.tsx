@@ -150,6 +150,16 @@ describe("ManageAppointmentPage", () => {
     expect(screen.queryByRole("button", { name: "Cambiar hora" })).not.toBeInTheDocument();
   });
 
+  it("offers to book again once the appointment is over", async () => {
+    appointmentIs({ ...confirmed, status: "COMPLETED", changeable: false });
+    renderWithQuery(<ManageAppointmentPage slug={SLUG} token={TOKEN} />);
+
+    expect(await screen.findByRole("heading", { name: "Esta cita ya pasó" })).toBeInTheDocument();
+    expect(screen.getByText("Completada")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reservar otra cita" })).toHaveAttribute("href", `/${SLUG}`);
+    expect(screen.queryByRole("button", { name: "Cambiar hora" })).not.toBeInTheDocument();
+  });
+
   it("does not offer changes when it is too late", async () => {
     appointmentIs({ ...confirmed, changeable: false });
     renderWithQuery(<ManageAppointmentPage slug={SLUG} token={TOKEN} />);
@@ -171,9 +181,9 @@ describe("ManageAppointmentPage", () => {
     renderWithQuery(<ManageAppointmentPage slug={SLUG} token={TOKEN} />);
 
     await userEvent.click(await screen.findByRole("button", { name: "Cambiar hora" }));
-    expect(screen.getByLabelText("Profesional")).toHaveValue("st-ana");
+    expect(screen.getByRole("radio", { name: "Ana" })).toBeChecked();
     await userEvent.click(await screen.findByRole("button", { name: "10:00" }));
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar el cambio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Cambiar a:/ }));
 
     expect(await screen.findByText(/Hemos cambiado tu cita/)).toBeInTheDocument();
     expect(availabilityQueries[0]!.get("staffId")).toBe("st-ana");
@@ -192,13 +202,13 @@ describe("ManageAppointmentPage", () => {
     renderWithQuery(<ManageAppointmentPage slug={SLUG} token={TOKEN} />);
 
     await userEvent.click(await screen.findByRole("button", { name: "Cambiar hora" }));
-    await userEvent.selectOptions(screen.getByLabelText("Profesional"), "");
+    await userEvent.click(screen.getByRole("radio", { name: "Me da igual" }));
     await userEvent.click(await screen.findByRole("button", { name: "09:15" }));
     const before = availabilityQueries.length;
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar el cambio" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Cambiar a:/ }));
 
     expect(await screen.findByText("Ese hueco acaba de ocuparse. Elige otra hora.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Confirmar el cambio" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Cambiar a:/ })).not.toBeInTheDocument();
     await waitFor(() => expect(availabilityQueries.length).toBeGreaterThan(before));
     expect(availabilityQueries.at(-1)!.has("staffId")).toBe(false); // «cualquier profesional»
   });
