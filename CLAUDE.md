@@ -39,7 +39,7 @@ El análisis y las decisiones están en [docs/fase-1-analisis.md](docs/fase-1-an
 - Vitest/jsdom: Radix necesita `ResizeObserver` (stub en `vitest.setup.ts`). Para nombres accesibles de botones con icono, usa `aria-label`, no `<span class="sr-only">`.
 - MSW 3: la opción es `onUnhandledFrame` (no `onUnhandledRequest`). pnpm rechaza versiones publicadas hace menos de 24 h: no añadas excepciones, usa la anterior.
 - Emails: se encolan en `email_outbox` **dentro** de la transacción del cambio y se envían con `EmailOutbox.sendNow` **después** del commit (nunca en `AFTER_COMMIT` ni en segundo plano: ver `docs/fase-7-emails.md`). No reactives el health de mail.
-- Demo: los emails de un negocio `is_demo` se guardan con estado `DEMO` (lo decide el `INSERT` de `EmailOutbox`) y no se envían nunca. No añadas otro camino de envío que se salte la outbox. Los slugs `demo-*` están reservados para las copias.
+- Demo: los emails de un negocio `is_demo` se guardan con estado `DEMO` (lo decide el `INSERT` de `EmailOutbox`) y no se envían nunca. No añadas otro camino de envío que se salte la outbox. Los slugs `demo-*` están reservados para las copias. Única excepción: el latido semanal (`/internal/jobs/mail-heartbeat`, `maintenance.yml`), que solo escribe al propio `MAIL_FROM` y mantiene viva la clave de Brevo.
 - Mailpit necesita `MP_SMTP_DISABLE_RDNS` y JavaMail, `mail.smtp.localhost` + `mail.from`: sin ellos, cada envío tarda 10 s o más (DNS).
 - El token del enlace de la cita es un HMAC del id (`AppointmentLinks`): el id de `Appointment` lo genera la aplicación (`Appointment.newId()`), no Hibernate.
 - Cloud Run responde **411** a un `POST` sin cuerpo ni `Content-Length` (`curl -X POST` a secas): añade `-H "Content-Length: 0"`.
@@ -74,7 +74,7 @@ Requisitos: JDK 25, Node 26 (`.node-version`, con fnm), pnpm, Docker. Primera ve
 - API: `cd apps/api` → `./mvnw spring-boot:run` (arranca) · `./mvnw verify` (tests, necesita Docker)
 - Web: `cd apps/web` → `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build`
 - Contrato tras cambiar la API: `./mvnw test -Dtest=OpenApiContractTests -Dopenapi.update=true` (en `apps/api`) y luego `pnpm api:types` (en `apps/web`).
-- Mailpit (emails en local): http://localhost:8025 · Job de reintentos: `POST /internal/jobs/outbox` con la cabecera `X-Jobs-Token`.
+- Mailpit (emails en local): http://localhost:8025 · Jobs: `POST /internal/jobs/{outbox,demo-cleanup,mail-heartbeat}` con la cabecera `X-Jobs-Token`.
 - Swagger UI (local): `http://localhost:<PORT>/swagger-ui.html` · OpenAPI: `/v3/api-docs`
 - En este equipo los puertos son 5433 (BD) y 8081 (API) porque 5432/8080 los usa otro proyecto; se cambian en `.env`.
 - Herramienta Bash de Claude: el `.bashrc` redefine `cd` (fnm); usar `builtin cd`. Para Node, mejor PowerShell con `$env:APPDATA\fnm\node-versions\v26.13.1\installation` en el `PATH`.

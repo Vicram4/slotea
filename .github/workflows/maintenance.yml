@@ -1,0 +1,50 @@
+name: Maintenance (production)
+
+# Una vez por semana, dos cosas que evitan que producción se apague sola sin que nadie se entere:
+#  1. Latido del email: Brevo desactiva una clave SMTP tras 90 días sin uso, y la demo no envía
+#     emails nunca. Si el SMTP no acepta el email, el job falla y GitHub avisa por email.
+#  2. Keepalive de los cron: GitHub desactiva los workflows programados tras 60 días sin actividad
+#     en el repo. Reactivarlos por la API reinicia esa cuenta, sin necesidad de hacer commits.
+on:
+  schedule:
+    - cron: "41 7 * * 1" # lunes, 07:41 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  API_URL: https://slotea-api-908024172167.europe-west1.run.app
+
+jobs:
+  mail-heartbeat:
+    name: Send the weekly email heartbeat
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Primero se despierta la API (arranque en frío) con reintentos, y el envío va sin ellos:
+      # si el SMTP fallara a ratos, reintentar podría mandar el email varias veces.
+      - name: Wake up the API
+        run: curl -fsS --retry 3 --retry-all-errors --max-time 60 -o /dev/null "$API_URL/actuator/health"
+
+      - name: POST /internal/jobs/mail-heartbeat
+        env:
+          JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
+        run: |
+          curl -fsS --max-time 60 -X POST -o /dev/null \
+            -H "Content-Length: 0" -H "X-Jobs-Token: $JOBS_TOKEN" "$API_URL/internal/jobs/mail-heartbeat"
+
+  keepalive:
+    name: Keep scheduled workflows enabled
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Re-enable the scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for workflow in jobs.yml smoke.yml maintenance.yml; do
+            gh workflow enable "$workflow"
+          done

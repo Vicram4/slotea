@@ -4,7 +4,7 @@ name: Jobs (production)
 # la despierta y llama a /internal/jobs/* con el token compartido (secreto JOBS_TOKEN del repo).
 # Cada hora y no más a menudo: cada llamada despierta también a Neon (~5 min de cómputo), y su
 # plan gratuito da 100 CU-h al mes. Una vez por hora son unas 15.
-# Nota: GitHub desactiva los cron tras 60 días sin actividad en el repo.
+# GitHub desactiva los cron tras 60 días sin actividad en el repo: maintenance.yml los reactiva cada semana.
 on:
   schedule:
     - cron: "23 * * * *" # cada hora, en el minuto 23 (minuto no redondo: menos cola en GitHub)

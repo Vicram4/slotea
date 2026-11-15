@@ -144,6 +144,15 @@ class EmailRetryTests {
         assertThat(row.get("last_error")).isNull();
     }
 
+    /** El latido semanal sí tiene que fallar: así el workflow se pone en rojo y GitHub avisa. */
+    @Test
+    void theMailHeartbeatFailsLoudlyWhenTheSmtpIsDown() {
+        assertThat(mvc.post().uri("/internal/jobs/mail-heartbeat")
+                .header("X-Jobs-Token", "test-only-jobs-token-not-a-real-secret"))
+                .hasStatus(HttpStatus.SERVICE_UNAVAILABLE).bodyJson()
+                .extractingPath("$.detail").isEqualTo("El servidor de correo no ha aceptado el email de comprobación.");
+    }
+
     private UUID enqueue(String to) {
         UUID appointmentId = EmailFixtures.bookedAppointment(mvc, tenant);
         return TenantContext.callAs(tenant.businessId(), () -> new TransactionTemplate(transactionManager)

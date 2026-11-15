@@ -1,7 +1,7 @@
 name: Smoke test (production)
 
 # Comprueba cada día que producción responde. Si falla, GitHub avisa por email.
-# Nota: GitHub desactiva los cron tras 60 días sin actividad en el repo.
+# GitHub desactiva los cron tras 60 días sin actividad en el repo: maintenance.yml los reactiva cada semana.
 on:
   schedule:
     - cron: "17 6 * * *" # 06:17 UTC (minuto no redondo: menos cola en GitHub)
