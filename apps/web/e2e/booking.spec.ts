@@ -30,7 +30,7 @@ test("two guests cannot take the same slot", async ({ page, browser }) => {
   await other.goto(bookingPage);
 
   const time = await chooseFirstSlot(page, "Corte de pelo", "Nacho");
-  expect(await chooseFirstSlot(other, "Corte de pelo", "Nacho")).toBe(time);
+  await chooseFirstSlot(other, "Corte de pelo", "Nacho", time);
   await fillCustomer(page, "Primera Clienta", "primera@example.test");
   await fillCustomer(other, "Segunda Clienta", "segunda@example.test");
 

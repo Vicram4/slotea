@@ -18,22 +18,29 @@ export async function startDemo(page: Page, sector: string, entry: string) {
 export const field = (page: Page, label: string) => page.getByLabel(label, { exact: true }).filter({ visible: true });
 
 /**
- * En la página pública de reservas: servicio, profesional (si se elige) y el primer hueco libre. Los
- * radios van ocultos dentro de su etiqueta (se pinta la etiqueta): el clic llega a la etiqueta.
+ * En la página pública de reservas: servicio, profesional (si se elige) y un hueco: `time` o, si no, el
+ * primero libre. Los radios van ocultos dentro de su etiqueta (se pinta la etiqueta): el clic llega a
+ * la etiqueta.
  */
-export async function chooseFirstSlot(page: Page, service: string, staff?: string): Promise<string> {
+export async function chooseFirstSlot(page: Page, service: string, staff?: string, time?: string): Promise<string> {
   await page.getByRole("radio", { name: new RegExp(service) }).check({ force: true });
   if (staff) {
+    // Hasta que llegan los huecos de ese profesional se siguen viendo los de todo el equipo: hay que
+    // esperarlos, o el «primer hueco» sería uno de otro.
+    const loaded = page.waitForResponse((r) => r.url().includes("/availability?") && r.url().includes("staffId="));
     await page
       .getByRole("radiogroup", { name: "¿Con quién?" })
       .getByRole("radio", { name: staff })
       .check({ force: true });
+    await loaded;
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
   }
-  const slot = page.getByRole("group", { name: /^(Mañana|Tarde|Noche)$/ }).getByRole("button").first();
+  const slots = page.getByRole("group", { name: /^(Mañana|Tarde|Noche)$/ }).getByRole("button");
+  const slot = time ? slots.getByText(time, { exact: true }) : slots.first();
   await expect(slot).toBeVisible();
-  const time = (await slot.textContent())!.trim();
+  const chosen = (await slot.textContent())!.trim();
   await slot.click();
-  return time;
+  return chosen;
 }
 
 export async function fillCustomer(page: Page, name: string, email: string) {
